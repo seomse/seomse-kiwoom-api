@@ -1,0 +1,11 @@
+C:\workspace_new\csharp\openapi\KiwoomApi\bin\Debug\KiwoomApi.exe.config
+C:\workspace_new\csharp\openapi\KiwoomApi\bin\Debug\KiwoomApi.exe
+C:\workspace_new\csharp\openapi\KiwoomApi\bin\Debug\KiwoomApi.pdb
+C:\workspace_new\csharp\openapi\KiwoomApi\bin\Debug\AxInterop.KHOpenAPILib.dll
+C:\workspace_new\csharp\openapi\KiwoomApi\obj\Debug\KiwoomApi.csprojAssemblyReference.cache
+C:\workspace_new\csharp\openapi\KiwoomApi\obj\Debug\KiwoomApi.csproj.CopyComplete
+C:\workspace_new\csharp\openapi\KiwoomApi\obj\Debug\KiwoomApi.exe
+C:\workspace_new\csharp\openapi\KiwoomApi\obj\Debug\KiwoomApi.pdb
+C:\workspace_new\csharp\openapi\KiwoomApi\bin\Debug\Interop.KHOpenAPILib.dll
+C:\workspace_new\csharp\openapi\KiwoomApi\obj\Debug\Interop.KHOpenAPILib.dll
+C:\workspace_new\csharp\openapi\KiwoomApi\obj\Debug\KiwoomApi.csproj.ResolveComReference.cache
