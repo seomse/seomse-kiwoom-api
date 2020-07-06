@@ -82,12 +82,16 @@
   <ItemGroup>
     <Reference Include="AxInterop.KHOpenAPILib, Version=1.2.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\KOASampleCS\obj\Debug\AxInterop.KHOpenAPILib.dll</HintPath>
+      <HintPath>Lib\AxInterop.KHOpenAPILib.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.Linq" />
+    <Reference Include="System.Data.OracleClient" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
@@ -98,30 +102,42 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Control\Api\Interface\ApiCommunication.cs" />
-    <Compile Include="Control\Api\Open\OpenApiCallBack.cs" />
-    <Compile Include="Control\Api\Open\OpenApiForm.cs">
+    <Compile Include="Control\Api\SocketApi\DefaultSocketMessage.cs" />
+    <Compile Include="Control\Api\SocketApi\MessageParser.cs" />
+    <Compile Include="Control\Api\SocketApi\ISocketMessage.cs" />
+    <Compile Include="Control\Api\SocketApi\Message\MINU0001.cs" />
+    <Compile Include="Control\Api\KiwoomApi\KiwoomApiCallBack.cs" />
+    <Compile Include="View\KiwoomApiForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Control\Api\Open\OpenApiForm.Designer.cs">
-      <DependentUpon>OpenApiForm.cs</DependentUpon>
+    <Compile Include="View\KiwoomApiForm.Designer.cs">
+      <DependentUpon>KiwoomApiForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Control\Api\Open\OpenApiController.cs" />
-    <Compile Include="Control\Api\Open\OpenApiMessageQueue.cs" />
+    <Compile Include="Control\Api\KiwoomApi\KiwoomApiController.cs" />
+    <Compile Include="Control\Api\KiwoomApi\KiwoomApiMessageQueue.cs" />
     <Compile Include="Control\Config\ConfigManager.cs" />
+    <Compile Include="Control\DB\DBController.cs" />
     <Compile Include="Control\Log\Logger.cs" />
-    <Compile Include="Control\Socket\ApiSocketReciver.cs" />
-    <Compile Include="Control\Api\Open\Message\Api\SELL0001.cs" />
-    <Compile Include="Control\Api\Open\Message\Default\ApiMessage.cs" />
-    <Compile Include="Control\Api\Open\Message\Default\IApiMessage.cs" />
+    <Compile Include="Control\Program\EndProgramThread.cs" />
+    <Compile Include="Control\Socket\ApiSocketReciever.cs" />
+    <Compile Include="Control\Api\SocketApi\Message\SELL0001.cs" />
     <Compile Include="Control\Socket\ApiSocketServer.cs" />
-    <Compile Include="Control\Socket\TestSocketClient.cs" />
+    <Compile Include="Control\Socket\ApiSocketClient.cs" />
     <Compile Include="Model\Def\KiwoomCode.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <Content Include="log4net.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="View\KiwoomApiForm.resx">
+      <DependentUpon>KiwoomApiForm.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <COMReference Include="KHOpenAPILib">
@@ -134,11 +150,5 @@
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </COMReference>
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Control\Api\Open\OpenApiForm.resx">
-      <DependentUpon>OpenApiForm.cs</DependentUpon>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

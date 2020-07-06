@@ -14,31 +14,24 @@ namespace KiwoomApi.Control.Socket
     class ApiSocketServer
     {
         Logger<ApiSocketServer> logger = new Logger<ApiSocketServer>();
-        private class Holder { internal static readonly ApiSocketServer INSTANCE = new ApiSocketServer(); }
-        public static ApiSocketServer Instance { get { return Holder.INSTANCE; } }
-
-        private Boolean isConnected = false;
-        private ApiSocketServer() {
-
+        public ApiSocketServer() {                                                                                                                     
             PORT = ConfigManager.ListenPort;
             IP = ConfigManager.ListenIP;
         }
 
-        public void startServer()
+        public void StartServer()
         {
             Thread socketServerThread = new Thread(initServer);
             socketServerThread.Start();
-            
         }
 
         private TcpListener Listener = null;
-        private TcpClient client = null;
         private int PORT;
         private string IP;
 
         private void initServer()
         {
-            logger.info("ApiSocketServer started");
+            logger.Info("ApiSocketServer started");
             try
             {
                 IPAddress address = IPAddress.Parse(IP);
@@ -46,25 +39,20 @@ namespace KiwoomApi.Control.Socket
                 Listener.Start();
                 while (true)
                 {
-                    startClient();
+                    AcceptClient();
                 }
             }
             catch (Exception e)
             {
-                logger.err(e.StackTrace);
-            }
-            finally
-            {
-
+                logger.Err(e.StackTrace);
             }
         }
 
-        private void startClient()
+        private void AcceptClient()
         {
-            client = Listener.AcceptTcpClient();
-            ApiSocketReciver r = new ApiSocketReciver();
+            TcpClient client = Listener.AcceptTcpClient();
+            ApiSocketReciever r = new ApiSocketReciever();
             r.startClient(client);
-            isConnected = true;
         }
 
     }
