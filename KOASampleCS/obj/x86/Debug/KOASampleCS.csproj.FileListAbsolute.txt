@@ -17,7 +17,6 @@ C:\workspace\git\seomse-kiwoom-api\KOASampleCS\bin\x86\Debug\KOASampleCS.exe
 C:\workspace\git\seomse-kiwoom-api\KOASampleCS\bin\x86\Debug\KOASampleCS.pdb
 C:\workspace\git\seomse-kiwoom-api\KOASampleCS\bin\x86\Debug\AxInterop.KHOpenAPILib.dll
 C:\workspace\git\seomse-kiwoom-api\KOASampleCS\bin\x86\Debug\Interop.KHOpenAPILib.dll
-C:\workspace\git\seomse-kiwoom-api\KOASampleCS\obj\x86\Debug\KOASampleCS.csprojAssemblyReference.cache
 C:\workspace\git\seomse-kiwoom-api\KOASampleCS\obj\x86\Debug\KOASampleCS.csproj.ResolveComReference.cache
 C:\workspace\git\seomse-kiwoom-api\KOASampleCS\obj\x86\Debug\KOASampleCS.Form1.resources
 C:\workspace\git\seomse-kiwoom-api\KOASampleCS\obj\x86\Debug\KOASampleCS.Properties.Resources.resources

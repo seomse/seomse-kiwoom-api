@@ -10,10 +10,10 @@ C:\workspace_new\csharp\openapi\KiwoomApiTest\obj\Debug\KiwoomApiTest.pdb
 C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\bin\Debug\KiwoomApiTest.exe.config
 C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\bin\Debug\KiwoomApiTest.exe
 C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\bin\Debug\KiwoomApiTest.pdb
-C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\obj\Debug\KiwoomApiTest.csprojAssemblyReference.cache
 C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\obj\Debug\KiwoomApiTest.Form1.resources
 C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\obj\Debug\KiwoomApiTest.Properties.Resources.resources
 C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\obj\Debug\KiwoomApiTest.csproj.GenerateResource.cache
 C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\obj\Debug\KiwoomApiTest.csproj.CoreCompileInputs.cache
 C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\obj\Debug\KiwoomApiTest.exe
 C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\obj\Debug\KiwoomApiTest.pdb
+C:\workspace\git\seomse-kiwoom-api\KiwoomApiTest\obj\Debug\KiwoomApiTest.csprojAssemblyReference.cache

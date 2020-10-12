@@ -82,7 +82,12 @@
   <ItemGroup>
     <Reference Include="AxInterop.KHOpenAPILib, Version=1.2.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>Lib\AxInterop.KHOpenAPILib.dll</HintPath>
+      <HintPath>bin\x86\Debug\AxInterop.KHOpenAPILib.dll</HintPath>
+    </Reference>
+    <Reference Include="Interop.KHOpenAPILib, Version=1.2.0.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <HintPath>bin\x86\Debug\Interop.KHOpenAPILib.dll</HintPath>
     </Reference>
     <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
@@ -91,7 +96,6 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.Linq" />
-    <Reference Include="System.Data.OracleClient" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
@@ -102,11 +106,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Control\Api\KiwoomApi\KiwoomApiCaller.cs" />
     <Compile Include="Control\Api\SocketApi\DefaultSocketMessage.cs" />
     <Compile Include="Control\Api\SocketApi\MessageParser.cs" />
     <Compile Include="Control\Api\SocketApi\ISocketMessage.cs" />
-    <Compile Include="Control\Api\SocketApi\Message\MINU0001.cs" />
     <Compile Include="Control\Api\KiwoomApi\KiwoomApiCallBack.cs" />
+    <Compile Include="Control\Api\SocketApi\Message\KWPING01.cs" />
+    <Compile Include="Control\Api\SocketApi\Message\KWTR0001.cs" />
+    <Compile Include="Model\Def\Separator.cs" />
     <Compile Include="View\KiwoomApiForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -120,7 +127,6 @@
     <Compile Include="Control\Log\Logger.cs" />
     <Compile Include="Control\Program\EndProgramThread.cs" />
     <Compile Include="Control\Socket\ApiSocketReciever.cs" />
-    <Compile Include="Control\Api\SocketApi\Message\SELL0001.cs" />
     <Compile Include="Control\Socket\ApiSocketServer.cs" />
     <Compile Include="Control\Socket\ApiSocketClient.cs" />
     <Compile Include="Model\Def\KiwoomCode.cs" />
@@ -129,6 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <Content Include="Lib\AxInterop.KHOpenAPILib.dll" />
     <Content Include="log4net.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -140,15 +147,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <COMReference Include="KHOpenAPILib">
-      <Guid>{6D8C2B4D-EF41-4750-8AD4-C299033833FB}</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>2</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
+    <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

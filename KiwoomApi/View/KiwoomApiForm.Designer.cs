@@ -1,6 +1,6 @@
-﻿namespace KiwoomApi.Control
+﻿namespace KiwoomApi.View
 {
-    partial class OpenApiForm
+    partial class KiwoomApiForm
     {
         /// <summary>
         /// Required designer variable.
@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(OpenApiForm));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(KiwoomApiForm));
             this.axKHOpenAPI = new AxKHOpenAPILib.AxKHOpenAPI();
             ((System.ComponentModel.ISupportInitialize)(this.axKHOpenAPI)).BeginInit();
             this.SuspendLayout();
@@ -37,22 +37,24 @@
             // 
             this.axKHOpenAPI.Enabled = true;
             this.axKHOpenAPI.Location = new System.Drawing.Point(12, 2);
+            this.axKHOpenAPI.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.axKHOpenAPI.Name = "axKHOpenAPI";
             this.axKHOpenAPI.OcxState = ((System.Windows.Forms.AxHost.State)(resources.GetObject("axKHOpenAPI.OcxState")));
-            this.axKHOpenAPI.Size = new System.Drawing.Size(64, 19);
+            this.axKHOpenAPI.Size = new System.Drawing.Size(80, 24);
             this.axKHOpenAPI.TabIndex = 12;
-            
+            this.axKHOpenAPI.OnEventConnect += new AxKHOpenAPILib._DKHOpenAPIEvents_OnEventConnectEventHandler(this.axKHOpenAPI_OnEventConnect);
             // 
-            // OpenApiForm
+            // KiwoomApiForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(120, 24);
+            this.ClientSize = new System.Drawing.Size(174, 30);
             this.Controls.Add(this.axKHOpenAPI);
             this.Enabled = false;
-            this.Name = "OpenApiForm";
-            this.Text = "OpenApiForm";
-            this.Load += new System.EventHandler(this.OpenApiForm_Load);
+            this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.Name = "KiwoomApiForm";
+            this.Text = "KiwoomApiForm";
+            this.Load += new System.EventHandler(this.KiwoomApiForm_Load);
             ((System.ComponentModel.ISupportInitialize)(this.axKHOpenAPI)).EndInit();
             this.ResumeLayout(false);
 

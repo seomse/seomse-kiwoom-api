@@ -16,7 +16,6 @@ namespace KiwoomApi.Control.Socket
         private NetworkStream NS = null;
         private StreamReader SR = null;
         private StreamWriter SW = null;
-        private MessageParser messageParser = new MessageParser();
         public void startClient(TcpClient clientSocket)
         {
             NS = clientSocket.GetStream(); 
@@ -28,7 +27,7 @@ namespace KiwoomApi.Control.Socket
                 while (clientSocket.Connected == true) 
                 {
                     message = SR.ReadLine();
-                    string responseMessage = messageParser.Parse(message);
+                    string responseMessage = MessageParser.Parse(message);
                     logger.Debug("responseMessage:" + responseMessage);
                     SW.WriteLine(responseMessage); 
                     SW.Flush();

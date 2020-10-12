@@ -8,32 +8,38 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using KiwoomApi.Control.Api;
+using KiwoomApi.Control.Api.KiwoomApi;
 
-namespace KiwoomApi.Control
+namespace KiwoomApi.View
 {
-    public partial class OpenApiForm : Form
+    public partial class KiwoomApiForm : Form
     {
 
-        private OpenApiController api = null;
+        private KiwoomApiController api = null;
 
-        public OpenApiForm()
+        public KiwoomApiForm()
         {
             InitializeComponent();
         }
 
         #region Form Callbacks
 
-        private void OpenApiForm_Load(object sender, EventArgs e)
+        private void KiwoomApiForm_Load(object sender, EventArgs e)
         {
             Form form = (Form)sender;
             form.ShowInTaskbar = false;
             form.Opacity = 0;
 
-            api = OpenApiController.Instance;
+            api = KiwoomApiController.Instance;
             api.AxKHOpenAPI = this.axKHOpenAPI;
             api.Init();
         }
 
         #endregion
+
+        private void axKHOpenAPI_OnEventConnect(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnEventConnectEvent e)
+        {
+
+        }
     }
 }

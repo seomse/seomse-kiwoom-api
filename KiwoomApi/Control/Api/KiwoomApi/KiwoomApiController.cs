@@ -5,25 +5,31 @@ using System.Data.Linq;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using KiwoomApi.Control.Socket;
 using KiwoomCode;
 
-namespace KiwoomApi.Control.Api
+namespace KiwoomApi.Control.Api.KiwoomApi
 {
-    class OpenApiController
+    class KiwoomApiController
     {
-        Logger<OpenApiController> logger = new Logger<OpenApiController>();
+        Logger<KiwoomApiController> logger = new Logger<KiwoomApiController>();
         IDictionary<String, OpenApiCallBack> callbackDic = new ConcurrentDictionary<String, OpenApiCallBack>();
         public AxKHOpenAPILib.AxKHOpenAPI AxKHOpenAPI { get; set; }
 
         public Boolean IsReady { get; set; }
-        private int _scrNum = 5000;
+        private int _scrNum = 1;
         private string _strRealConScrNum = "0000";
         private string _strRealConName = "0000";
         private int _nIndex = 0;
 
         private bool _bRealTrade = false;
 
-        private readonly string DEFAULT_SEPARATOR = "|";
+        private readonly string PARAM_SEPARATOR = ",";
+        private readonly string DATA_SEPARATOR = "|";
+
+        private string StockCode { get; set; }
+
+
 
         #region Observers
         private delegate void CallBackOnReceiveChejanData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveChejanDataEvent e);
@@ -50,9 +56,9 @@ namespace KiwoomApi.Control.Api
         #endregion
 
         #region SingleTon
-        private class Holder { internal static readonly OpenApiController INSTANCE = new OpenApiController(); }
-        public static OpenApiController Instance { get { return Holder.INSTANCE; } }
-        private OpenApiController()
+        private class Holder { internal static readonly KiwoomApiController INSTANCE = new KiwoomApiController(); }
+        public static KiwoomApiController Instance { get { return Holder.INSTANCE; } }
+        private KiwoomApiController()
         {
             IsReady = false;
         }
@@ -63,10 +69,10 @@ namespace KiwoomApi.Control.Api
         // 화면번호 생산
         private string GetScrNum()
         {
-            if (_scrNum < 9999)
+            if (_scrNum < 200)
                 _scrNum++;
             else
-                _scrNum = 5000;
+                _scrNum = 1;
 
             return _scrNum.ToString();
         }
@@ -97,6 +103,13 @@ namespace KiwoomApi.Control.Api
             AxKHOpenAPI.CommRqData(RQName, TRcode, seq, screenNum);
         }
 
+        private void CommKwRqData(string codeListStr, string screenNum)
+        {
+            int nCodeCount = codeListStr.Split(';').Length;
+            AxKHOpenAPI.CommKwRqData(codeListStr, 0, nCodeCount, 0, "관심종목정보", screenNum);
+        }
+
+
         public void Init()
         {
             if (AxKHOpenAPI == null)
@@ -124,6 +137,7 @@ namespace KiwoomApi.Control.Api
                 return;
             }
             OpenApiCallBack callback = new OpenApiCallBack();
+            /*
             onReceiveChejanData += callback.AxKHOpenAPI_OnReceiveChejanData;
             onReceiveConditionVer += callback.AxKHOpenAPI_OnReceiveConditionVer;
             onReceiveInvestRealData += callback.AxKHOpenAPI_OnReceiveInvestRealData;
@@ -133,9 +147,8 @@ namespace KiwoomApi.Control.Api
             onReceiveTrCondition += callback.AxKHOpenAPI_OnReceiveTrCondition;
             onReceiveTrData += callback.AxKHOpenAPI_OnReceiveTrData;
 
-            
-
             callbackDic.Add(clientId, callback);
+            */
         }
         public void removeCallBack(String clientId)
         {
@@ -172,37 +185,37 @@ namespace KiwoomApi.Control.Api
 
         private void axKHOpenAPI_OnReceiveChejanData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveChejanDataEvent e)
         {
-            onReceiveChejanData(sender, e);
+            //onReceiveChejanData(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveConditionVer(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveConditionVerEvent e)
         {
-            onReceiveConditionVer(sender, e);
+            //onReceiveConditionVer(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveInvestRealData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveInvestRealDataEvent e)
         {
-            onReceiveInvestRealData(sender, e);
+            //onReceiveInvestRealData(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveMsg(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveMsgEvent e)
         {
-            onReceiveMsg(sender, e);
+            //onReceiveMsg(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveRealCondition(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveRealConditionEvent e)
         {
-            onReceiveRealCondition(sender, e);
+            //onReceiveRealCondition(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveRealData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveRealDataEvent e)
         {
-            onReceiveRealData(sender, e);
+            //onReceiveRealData(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveTrCondition(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrConditionEvent e)
         {
-            onReceiveTrCondition(sender, e);
+            //onReceiveTrCondition(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveTrData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrDataEvent e)
@@ -210,10 +223,15 @@ namespace KiwoomApi.Control.Api
             StringBuilder apiMessage = new StringBuilder();
             
             object result = AxKHOpenAPI.GetCommDataEx(e.sTrCode, e.sRQName);
+            if(result == null)
+            {
+                logger.Err("StockCode : " + StockCode + " Data is null!");
+                return;
+            }
             Type valueType = result.GetType();
             object[,] resultArrMulti;
             object[] resultArr;
-            String code = "FAIL";
+            string code = "FAIL";
             if (e.sRQName == "주식기본정보요청") code = "OPT10001";
             if (e.sRQName == "주식거래원요청") code = "OPT10002";
             if (e.sRQName == "체결정보요청") code = "OPT10003";
@@ -441,24 +459,30 @@ namespace KiwoomApi.Control.Api
             if (valueType.FullName == "System.Object[,]")
             {
                 resultArrMulti = (object[,])result;
+                apiMessage.Append(code).Append(PARAM_SEPARATOR)
+                    .Append(StockCode).Append(PARAM_SEPARATOR);
                 for (int i = 0; i < resultArrMulti.GetLength(0); i++)
                 {
-                    apiMessage.Append(code).Append(DEFAULT_SEPARATOR);
                     for (int j = 0; j < resultArrMulti.GetLength(1); j++)
                     {
-                        apiMessage.Append(resultArrMulti[i, j]).Append(DEFAULT_SEPARATOR);
+                        apiMessage.Append(resultArrMulti[i, j]).Append(DATA_SEPARATOR);
                     }
                     apiMessage.Length = apiMessage.Length - 1;
+                    apiMessage.Append("\n");
                 }
-
+                if(apiMessage.Length > 0)
+                {
+                    apiMessage.Length = apiMessage.Length - 1;
+                }
             }
             else if (valueType.FullName == "System.Object[]")
             {
                 resultArr = (object[])result;
-                apiMessage.Append(code).Append(DEFAULT_SEPARATOR);
+                apiMessage.Append(code).Append(PARAM_SEPARATOR)
+                    .Append(StockCode).Append(PARAM_SEPARATOR);
                 for (int i = 0; i < resultArr.GetLength(0); i++)
                 {
-                    apiMessage.Append(resultArr[i]).Append(DEFAULT_SEPARATOR);
+                    apiMessage.Append(resultArr[i]).Append(DATA_SEPARATOR);
                 }
                 apiMessage.Length = apiMessage.Length - 1;
             }
@@ -467,21 +491,17 @@ namespace KiwoomApi.Control.Api
                 apiMessage.Append(result);
             }
 
-            
-            logger.Info(apiMessage.ToString());
-            //onReceiveTrData(sender, e);
+
+            ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString());
         }
 
         #endregion
-
         #region TR Functions
-
-
         ///<summary> 코드명:OPT10001 기능명:주식기본정보요청</summary>
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10001(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("주식기본정보요청", "OPT10001", 0, GetScrNum());
         }
 
@@ -489,7 +509,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10002(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("주식거래원요청", "OPT10002", 0, GetScrNum());
         }
 
@@ -497,7 +517,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10003(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("체결정보요청", "OPT10003", 0, GetScrNum());
         }
 
@@ -505,7 +525,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10004(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("주식호가요청", "OPT10004", 0, GetScrNum());
         }
 
@@ -513,7 +533,8 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10005(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
+            StockCode = arg1;
             CommRqData("주식일주월시분요청", "OPT10005", 0, GetScrNum());
         }
 
@@ -521,7 +542,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10006(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("주식시분요청", "OPT10006", 0, GetScrNum());
         }
 
@@ -529,18 +550,17 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10007(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("시세표성정보요청", "OPT10007", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPT10008 기능명:주식외국인요청</summary>
-        ///<param name="arg1">화면번호 : 0241</param>
         ///<param name="arg2">종목코드 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT10008(string arg1, string arg2, string arg3)
+        public void GetOPT10008(string arg2, string arg3)
         {
             string screenCode = "0241";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("시작일자", arg3);
             CommRqData("주식외국인요청", "OPT10008", 0, screenCode);
@@ -550,7 +570,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10009(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("주식기관요청", "OPT10009", 0, GetScrNum());
         }
 
@@ -558,7 +578,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10010(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("업종프로그램요청", "OPT10010", 0, GetScrNum());
         }
 
@@ -571,14 +591,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10013 기능명:신용매매동향요청</summary>
-        ///<param name="arg1">화면번호 : 0141</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">조회구분 : 1:융자, 2:대주</param>
-        public void GetOPT10013(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10013(string arg2, string arg3, string arg4)
         {
             string screenCode = "0141";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("일자", arg3);
             SetInputValue("조회구분", arg4);
@@ -586,15 +605,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10014 기능명:공매도추이요청</summary>
-        ///<param name="arg1">화면번호 : 0142</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">시간구분 : 0:시작일, 1:기간</param>
         ///<param name="arg4">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg5">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT10014(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT10014(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0142";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("시간구분", arg3);
             SetInputValue("시작일자", arg4);
@@ -603,20 +621,19 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10015 기능명:일별거래상세요청</summary>
-        ///<param name="arg1">화면번호 : 0143</param>
-        ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
-        ///<param name="arg3">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT10015(string arg1, string arg2, string arg3)
+        ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
+        ///<param name="arg2">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
+        public void GetOPT10015(string arg1, string arg2)
         {
             string screenCode = "0143";
-            SetInputValue("화면번호", arg1);
-            SetInputValue("종목코드", arg2);
-            SetInputValue("시작일자", arg3);
+            StockCode = arg1;
+            SetInputValue("화면번호", screenCode);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
+            SetInputValue("시작일자", arg2);
             CommRqData("일별거래상세요청", "OPT10015", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT10016 기능명:신고저가요청</summary>
-        ///<param name="arg1">화면번호 : 0161</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">신고저구분 : 1:신고가,2:신저가</param>
         ///<param name="arg4">고저종구분 : 1:고저기준, 2:종가기준</param>
@@ -625,10 +642,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg7">신용조건 : 0:전체조회, 1:신용융자A군, 2:신용융자B군, 3:신용융자C군, 4:신용융자D군, 9:신용융자전체</param>
         ///<param name="arg8">상하한포함 : 0:미포함, 1:포함</param>
         ///<param name="arg9">기간 : 5:5일, 10:10일, 20:20일, 60:60일, 250:250일, 250일까지 입력가능</param>
-        public void GetOPT10016(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9)
+        public void GetOPT10016(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9)
         {
             string screenCode = "0161";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("신고저구분", arg3);
             SetInputValue("고저종구분", arg4);
@@ -641,7 +658,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10017 기능명:상하한가요청</summary>
-        ///<param name="arg1">화면번호 : 0162</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">상하한구분 : 1:상한, 2:상승, 3:보합, 4: 하한, 5:하락, 6:전일상한, 7:전일하한</param>
         ///<param name="arg4">정렬구분 : 1:종목코드순, 2:연속횟수순(상위100개), 3:등락률순</param>
@@ -649,10 +665,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg6">거래량구분 : 00000:전체조회, 00010:만주이상, 00050:5만주이상, 00100:10만주이상, 00150:15만주이상, 00200:20만주이상, 00300:30만주이상, 00500:50만주이상, 01000:백만주이상</param>
         ///<param name="arg7">신용조건 : 0:전체조회, 1:신용융자A군, 2:신용융자B군, 3:신용융자C군, 4:신용융자D군, 9:신용융자전체</param>
         ///<param name="arg8">매매금구분 : 0:전체조회, 1:1천원미만, 2:1천원~2천원, 3:2천원~3천원, 4:5천원~1만원, 5:1만원이상, 8:1천원이상</param>
-        public void GetOPT10017(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8)
+        public void GetOPT10017(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8)
         {
             string screenCode = "0162";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("상하한구분", arg3);
             SetInputValue("정렬구분", arg4);
@@ -664,17 +680,16 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10018 기능명:고저가근접요청</summary>
-        ///<param name="arg1">화면번호 : 0163</param>
         ///<param name="arg2">고저구분 : 1:고가, 2:저가</param>
         ///<param name="arg3">근접율 : 05:0.5 10:1.0, 15:1.5, 20:2.0. 25:2.5, 30:3.0 </param>
         ///<param name="arg4">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg5">거래량구분 : 00000:전체조회, 00010:만주이상, 00050:5만주이상, 00100:10만주이상, 00150:15만주이상, 00200:20만주이상, 00300:30만주이상, 00500:50만주이상, 01000:백만주이상</param>
         ///<param name="arg6">종목조건 : 0:전체조회,1:관리종목제외, 3:우선주제외, 5:증100제외, 6:증100만보기, 7:증40만보기, 8:증30만보기</param>
         ///<param name="arg7">신용조건 : 0:전체조회, 1:신용융자A군, 2:신용융자B군, 3:신용융자C군, 4:신용융자D군, 9:신용융자전체</param>
-        public void GetOPT10018(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
+        public void GetOPT10018(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
             string screenCode = "0163";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("고저구분", arg2);
             SetInputValue("근접율", arg3);
             SetInputValue("시장구분", arg4);
@@ -685,7 +700,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10019 기능명:가격급등락요청</summary>
-        ///<param name="arg1">화면번호 : 0164</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥, 201:코스피200</param>
         ///<param name="arg3">등락구분 : 1:급등, 2:급락</param>
         ///<param name="arg4">시간구분 : 1:분전, 2:일전</param>
@@ -695,10 +709,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg8">신용조건 : 0:전체조회, 1:신용융자A군, 2:신용융자B군, 3:신용융자C군, 4:신용융자D군, 9:신용융자전체</param>
         ///<param name="arg9">가격조건 : 0:전체조회, 1:1천원미만, 2:1천원~2천원, 3:2천원~3천원, 4:5천원~1만원, 5:1만원이상, 8:1천원이상</param>
         ///<param name="arg10">상하한포함 : 0:미포함, 1:포함</param>
-        public void GetOPT10019(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10)
+        public void GetOPT10019(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10)
         {
             string screenCode = "0164";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("등락구분", arg3);
             SetInputValue("시간구분", arg4);
@@ -712,16 +726,15 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10020 기능명:호가잔량상위요청</summary>
-        ///<param name="arg1">화면번호 : 0165</param>
         ///<param name="arg2">시장구분 : 001:코스피, 101:코스닥</param>
         ///<param name="arg3">정렬구분 : 1:순매수잔량순, 2:순매도잔량순, 3:매수비율순, 4:매도비율순</param>
         ///<param name="arg4">거래량구분 : 0000:장시작전(0주이상), 0010:만주이상, 0050:5만주이상, 00100:10만주이상</param>
         ///<param name="arg5">종목조건 : 0:전체조회, 1:관리종목제외, 5:증100제외, 6:증100만보기, 7:증40만보기, 8:증30만보기, 9:증20만보기</param>
         ///<param name="arg6">신용조건 : 0:전체조회, 1:신용융자A군, 2:신용융자B군, 3:신용융자C군, 4:신용융자D군, 9:신용융자전체</param>
-        public void GetOPT10020(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT10020(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0165";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("정렬구분", arg3);
             SetInputValue("거래량구분", arg4);
@@ -731,17 +744,16 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10021 기능명:호가잔량급증요청</summary>
-        ///<param name="arg1">화면번호 : 0166</param>
         ///<param name="arg2">시장구분 : 001:코스피, 101:코스닥</param>
         ///<param name="arg3">매매구분 : 1:매수잔량, 2:매도잔량</param>
         ///<param name="arg4">정렬구분 : 1:급증량, 2:급증률</param>
         ///<param name="arg5">시간구분 : 분 입력</param>
         ///<param name="arg6">거래량구분 : 1:천주이상, 5:5천주이상, 10:만주이상, 50:5만주이상, 100:10만주이상</param>
         ///<param name="arg7">종목조건 : 0:전체조회, 1:관리종목제외, 5:증100제외, 6:증100만보기, 7:증40만보기, 8:증30만보기, 9:증20만보기</param>
-        public void GetOPT10021(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
+        public void GetOPT10021(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
             string screenCode = "0166";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("매매구분", arg3);
             SetInputValue("정렬구분", arg4);
@@ -752,16 +764,15 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10022 기능명:잔량율급증요청</summary>
-        ///<param name="arg1">화면번호 : 0167</param>
         ///<param name="arg2">시장구분 : 001:코스피, 101:코스닥</param>
         ///<param name="arg3">비율구분 : 1:매수/매도비율, 2:매도/매수비율</param>
         ///<param name="arg4">시간구분 : 분 입력</param>
         ///<param name="arg5">거래량구분 : 5:5천주이상, 10:만주이상, 50:5만주이상, 100:10만주이상</param>
         ///<param name="arg6">종목조건 : 0:전체조회, 1:관리종목제외, 5:증100제외, 6:증100만보기, 7:증40만보기, 8:증30만보기, 9:증20만보기</param>
-        public void GetOPT10022(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT10022(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0167";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("비율구분", arg3);
             SetInputValue("시간구분", arg4);
@@ -771,7 +782,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10023 기능명:거래량급증요청</summary>
-        ///<param name="arg1">화면번호 : 0168</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">정렬구분 : 1:급증량, 2:급증률</param>
         ///<param name="arg4">시간구분 : 1:분, 2:전일</param>
@@ -779,10 +789,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg6">시간 : 분 입력</param>
         ///<param name="arg7">종목조건 : 0:전체조회, 1:관리종목제외, 5:증100제외, 6:증100만보기, 7:증40만보기, 8:증30만보기, 9:증20만보기</param>
         ///<param name="arg8">가격구분 : 0:전체조회, 2:5만원이상, 5:1만원이상, 6:5천원이상, 8:1천원이상, 9:10만원이상</param>
-        public void GetOPT10023(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8)
+        public void GetOPT10023(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8)
         {
             string screenCode = "0168";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("정렬구분", arg3);
             SetInputValue("시간구분", arg4);
@@ -794,14 +804,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10024 기능명:거래량갱신요청</summary>
-        ///<param name="arg1">화면번호 : 0169</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">주기구분 : 5:5일, 10:10일, 20:20일, 60:60일, 250:250일</param>
         ///<param name="arg4">거래량구분 : 5:5천주이상, 10:만주이상, 50:5만주이상, 100:10만주이상, 200:20만주이상, 300:30만주이상, 500:50만주이상, 1000:백만주이상</param>
-        public void GetOPT10024(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10024(string arg2, string arg3, string arg4)
         {
             string screenCode = "0169";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("주기구분", arg3);
             SetInputValue("거래량구분", arg4);
@@ -809,16 +818,15 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10025 기능명:매물대집중요청</summary>
-        ///<param name="arg1">화면번호 : 0170</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">매물집중비율 : 0~100 입력</param>
         ///<param name="arg4">현재가진입 : 0:현재가 매물대 집입 포함안함, 1:현재가 매물대 집입포함</param>
         ///<param name="arg5">매물대수 : 숫자입력</param>
         ///<param name="arg6">주기구분 : 50:50일, 100:100일, 150:150일, 200:200일, 250:250일, 300:300일</param>
-        public void GetOPT10025(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT10025(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0170";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("매물집중비율", arg3);
             SetInputValue("현재가진입", arg4);
@@ -828,18 +836,16 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10026 기능명:고저PER요청</summary>
-        ///<param name="arg1">화면번호 : 0171</param>
         ///<param name="arg2">PER구분 : 1:코스피저PER, 2:코스피고PER, 3:코스닥저PER, 4:코스닥고PER</param>
-        public void GetOPT10026(string arg1, string arg2)
+        public void GetOPT10026(string arg2)
         {
             string screenCode = "0171";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("PER구분", arg2);
             CommRqData("고저PER요청", "OPT10026", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT10027 기능명:전일대비등락률상위요청</summary>
-        ///<param name="arg1">화면번호 : 0181</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">정렬구분 : 1:상승률, 2:상승폭, 3:하락률, 4:하락폭</param>
         ///<param name="arg4">거래량조건 : 0000:전체조회, 0010:만주이상, 0050:5만주이상, 0100:10만주이상, 0150:15만주이상, 0200:20만주이상, 0300:30만주이상, 0500:50만주이상, 1000:백만주이상</param>
@@ -848,10 +854,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg7">상하한포함 : 0:불 포함, 1:포함</param>
         ///<param name="arg8">가격조건 : 0:전체조회, 1:1천원미만, 2:1천원~2천원, 3:2천원~5천원, 4:5천원~1만원, 5:1만원이상, 8:1천원이상</param>
         ///<param name="arg9">거래대금조건 : 0:전체조회, 3:3천만원이상, 5:5천만원이상, 10:1억원이상, 30:3억원이상, 50:5억원이상, 100:10억원이상, 300:30억원이상, 500:50억원이상, 1000:100억원이상, 3000:300억원이상, 5000:500억원이상</param>
-        public void GetOPT10027(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9)
+        public void GetOPT10027(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9)
         {
             string screenCode = "0181";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("정렬구분", arg3);
             SetInputValue("거래량조건", arg4);
@@ -864,7 +870,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10028 기능명:시가대비등락률요청</summary>
-        ///<param name="arg1">화면번호 : 0182</param>
         ///<param name="arg2">정렬구분 : 1:시가, 2:고가, 3:저가, 4:기준가</param>
         ///<param name="arg3">거래량조건 : 0000:전체조회, 0010:만주이상, 0050:5만주이상, 0100:10만주이상, 0500:50만주이상, 1000:백만주이상</param>
         ///<param name="arg4">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
@@ -873,10 +878,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg7">신용조건 : 0:전체조회, 1:신용융자A군, 2:신용융자B군, 3:신용융자C군, 4:신용융자D군, 9:신용융자전체</param>
         ///<param name="arg8">거래대금조건 : 0:전체조회, 3:3천만원이상, 5:5천만원이상, 10:1억원이상, 30:3억원이상, 50:5억원이상, 100:10억원이상, 300:30억원이상, 500:50억원이상, 1000:100억원이상, 3000:300억원이상, 5000:500억원이상</param>
         ///<param name="arg9">등락조건 : 1:상위, 2:하위</param>
-        public void GetOPT10028(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9)
+        public void GetOPT10028(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9)
         {
             string screenCode = "0182";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("정렬구분", arg2);
             SetInputValue("거래량조건", arg3);
             SetInputValue("시장구분", arg4);
@@ -889,17 +894,16 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10029 기능명:예상체결등락률상위요청</summary>
-        ///<param name="arg1">화면번호 : 0183</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">정렬구분 : 1:상승률, 2:상승폭, 3:보합, 4:하락률,5:하락폭, 6, 체결량, 7:상한, 8:하한</param>
         ///<param name="arg4">거래량조건 : 0:전체조회, 1;천주이상, 3:3천주, 5:5천주, 10:만주이상, 50:5만주이상, 100:10만주이상</param>
         ///<param name="arg5">종목조건 : 0:전체조회, 1:관리종목제외, 3:우선주제외, 5:증100제외, 6:증100만보기, 7:증40만보기, 8:증30만보기, 9:증20만보기, 11:정리매매종목제외</param>
         ///<param name="arg6">신용조건 : 0:전체조회, 1:신용융자A군, 2:신용융자B군, 3:신용융자C군, 4:신용융자D군, 9:신용융자전체</param>
         ///<param name="arg7">가격조건 : 0:전체조회, 1:1천원미만, 2:1천원~2천원, 3:2천원~5천원, 4:5천원~1만원, 5:1만원이상, 8:1천원이상</param>
-        public void GetOPT10029(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
+        public void GetOPT10029(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
             string screenCode = "0183";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("정렬구분", arg3);
             SetInputValue("거래량조건", arg4);
@@ -910,14 +914,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10030 기능명:당일거래량상위요청</summary>
-        ///<param name="arg1">화면번호 : 0184</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">정렬구분 : 1:거래량, 2:거래회전율, 3:거래대금</param>
         ///<param name="arg4">관리종목포함 : 0:관리종목 포함, 1:관리종목 미포함</param>
-        public void GetOPT10030(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10030(string arg2, string arg3, string arg4)
         {
             string screenCode = "0184";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("정렬구분", arg3);
             SetInputValue("관리종목포함", arg4);
@@ -925,15 +928,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10031 기능명:전일거래량상위요청</summary>
-        ///<param name="arg1">화면번호 : 0185</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">조회구분 : 1:전일거래량 상위100종목, 2:전일거래대금 상위100종목</param>
         ///<param name="arg4">순위시작 : 0 ~ 100 값 중에  조회를 원하는 순위 시작값</param>
         ///<param name="arg5">순위끝 : 0 ~ 100 값 중에  조회를 원하는 순위 끝값</param>
-        public void GetOPT10031(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT10031(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0185";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("조회구분", arg3);
             SetInputValue("순위시작", arg4);
@@ -942,29 +944,27 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10032 기능명:거래대금상위요청</summary>
-        ///<param name="arg1">화면번호 : 1086</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">관리종목포함 : 0:관리종목 미포함, 1:관리종목 포함</param>
-        public void GetOPT10032(string arg1, string arg2, string arg3)
+        public void GetOPT10032(string arg2, string arg3)
         {
             string screenCode = "1086";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("관리종목포함", arg3);
             CommRqData("거래대금상위요청", "OPT10032", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT10033 기능명:신용비율상위요청</summary>
-        ///<param name="arg1">화면번호 : 0188</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">거래량구분 : 0:전체조회, 10:만주이상, 50:5만주이상, 100:10만주이상, 200:20만주이상, 300:30만주이상, 500:50만주이상, 1000:백만주이상</param>
         ///<param name="arg4">종목조건 : 0:전체조회, 1:관리종목제외, 5:증100제외, 6:증100만보기, 7:증40만보기, 8:증30만보기, 9:증20만보기</param>
         ///<param name="arg5">상하한포함 : 0:상하한 미포함, 1:상하한포함</param>
         ///<param name="arg6">신용조건 : 0:전체조회, 1:신용융자A군, 2:신용융자B군, 3:신용융자C군, 4:신용융자D군, 9:신용융자전체</param>
-        public void GetOPT10033(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT10033(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0188";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("거래량구분", arg3);
             SetInputValue("종목조건", arg4);
@@ -974,14 +974,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10034 기능명:외인기간별매매상위요청</summary>
-        ///<param name="arg1">화면번호 : 0242</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">매매구분 : 1:순매도, 2:순매수, 3:순매매</param>
         ///<param name="arg4">기간 : 0:당일, 1:전일, 5:5일, 10;10일, 20:20일, 60:60일 </param>
-        public void GetOPT10034(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10034(string arg2, string arg3, string arg4)
         {
             string screenCode = "0242";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("매매구분", arg3);
             SetInputValue("기간", arg4);
@@ -989,14 +988,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10035 기능명:외인연속순매매상위요청</summary>
-        ///<param name="arg1">화면번호 : 0243</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">매매구분 : 1:연속순매도, 2:연속순매수</param>
         ///<param name="arg4">기준일구분 : 0:당일기준, 1:전일기준</param>
-        public void GetOPT10035(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10035(string arg2, string arg3, string arg4)
         {
             string screenCode = "0243";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("매매구분", arg3);
             SetInputValue("기준일구분", arg4);
@@ -1004,30 +1002,28 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10036 기능명:매매상위요청</summary>
-        ///<param name="arg1">화면번호 : 0244</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">기간 : 0:당일, 1:전일, 5:5일, 10;10일, 20:20일, 60:60일 </param>
-        public void GetOPT10036(string arg1, string arg2, string arg3)
+        public void GetOPT10036(string arg2, string arg3)
         {
             string screenCode = "0244";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("기간", arg3);
             CommRqData("매매상위요청", "OPT10036", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT10037 기능명:외국계창구매매상위요청</summary>
-        ///<param name="arg1">화면번호 : 0246</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">기간 : 0:당일, 1:전일, 5:5일, 10;10일, 20:20일, 60:60일 </param>
         ///<param name="arg4">매매구분 : 1:순매수, 2:순매도, 3:매수, 4:매도</param>
         ///<param name="arg5">정렬구분 : 1:금액, 2:수량</param>
         ///<param name="arg6">현재가조건 : </param>
         ///<param name="arg7">가격조건 : 0:전체조회, 10000:1천원이상, 3000:3천원이상, 5000:5천원이상, 10000:1만원이상, 50000:5만원이상, 100000:10만원이상</param>
-        public void GetOPT10037(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
+        public void GetOPT10037(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
             string screenCode = "0246";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("기간", arg3);
             SetInputValue("매매구분", arg4);
@@ -1038,16 +1034,15 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10038 기능명:종목별증권사순위요청</summary>
-        ///<param name="arg1">화면번호 : 0251</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg5">조회구분 : 1:순매도순위정렬, 2:순매수순위정렬</param>
         ///<param name="arg6">기간 : </param>
-        public void GetOPT10038(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT10038(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0251";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("시작일자", arg3);
             SetInputValue("종료일자", arg4);
@@ -1057,15 +1052,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10039 기능명:증권사별매매상위요청</summary>
-        ///<param name="arg1">화면번호 : 0252</param>
         ///<param name="arg2">회원사코드 : 888:외국계 전체, 나머지 회원사 코드는 OPT10042 조회 또는 GetBranchCodeName()함수사용</param>
         ///<param name="arg3">거래량구분 : 0:전체, 5:5000주, 10:1만주, 50:5만주, 100:10만주, 500:50만주, 1000: 100만주</param>
         ///<param name="arg4">매매구분 : 1:순매수, 2:순매도</param>
         ///<param name="arg5">기간 : 1:전일, 5:5일, 10:10일, 60:60일</param>
-        public void GetOPT10039(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT10039(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0252";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("회원사코드", arg2);
             SetInputValue("거래량구분", arg3);
             SetInputValue("매매구분", arg4);
@@ -1077,18 +1071,17 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10040(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("당일주요거래원요청", "OPT10040", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPT10041 기능명:조기종료통화단위요청</summary>
-        ///<param name="arg1">화면번호 : 0252</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">영웅클럽구분 : </param>
-        public void GetOPT10041(string arg1, string arg2, string arg3)
+        public void GetOPT10041(string arg2, string arg3)
         {
             string screenCode = "0252";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("영웅클럽구분", arg3);
             CommRqData("조기종료통화단위요청", "OPT10041", 0, screenCode);
@@ -1104,7 +1097,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg7">정렬기준 : 1:종가순, 2:날짜순</param>
         public void GetOPT10042(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시작일자", arg2);
             SetInputValue("종료일자", arg3);
             SetInputValue("조회기간구분", arg4);
@@ -1125,7 +1118,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg8">회원사코드 : 888:외국계 전체, 나머지 회원사 코드는 OPT10042 조회 또는 GetBranchCodeName()함수사용</param>
         public void GetOPT10043(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시작일자", arg2);
             SetInputValue("종료일자", arg3);
             SetInputValue("조회기간구분", arg4);
@@ -1137,15 +1130,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10044 기능명:일별기관매매종목요청</summary>
-        ///<param name="arg1">화면번호 : 0257</param>
         ///<param name="arg2">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">매매구분 : 0:전체, 1:순매도, 2:순매수</param>
         ///<param name="arg5">시장구분 : 001:코스피, 101:코스닥</param>
-        public void GetOPT10044(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT10044(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0257";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시작일자", arg2);
             SetInputValue("종료일자", arg3);
             SetInputValue("매매구분", arg4);
@@ -1154,7 +1146,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10045 기능명:종목별기관매매추이요청</summary>
-        ///<param name="arg1">화면번호 : 0258</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
@@ -1162,10 +1153,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg6">외인추정단가구분 : 1:매수단가, 2:매도단가</param>
         ///<param name="arg7">누적기간 : 사용안함</param>
         ///<param name="arg8">기간구분 : 사용안함</param>
-        public void GetOPT10045(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8)
+        public void GetOPT10045(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8)
         {
             string screenCode = "0258";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("시작일자", arg3);
             SetInputValue("종료일자", arg4);
@@ -1177,25 +1168,23 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10048 기능명:ELW일별민감도지표요청</summary>
-        ///<param name="arg1">화면번호 : 0286</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
-        public void GetOPT10048(string arg1, string arg2)
+        public void GetOPT10048(string arg2)
         {
             string screenCode = "0286";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             CommRqData("ELW일별민감도지표요청", "OPT10048", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT10049 기능명:ELW투자지표요청</summary>
-        ///<param name="arg1">화면번호 : 0286</param>
         ///<param name="arg2">연속구분 : 연속구분</param>
         ///<param name="arg3">연속키 : 연속키</param>
         ///<param name="arg4">종목코드 : 종목코드</param>
-        public void GetOPT10049(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10049(string arg2, string arg3, string arg4)
         {
             string screenCode = "0286";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("연속구분", arg2);
             SetInputValue("연속키", arg3);
             SetInputValue("종목코드", arg4);
@@ -1203,25 +1192,23 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10050 기능명:ELW민감도지표요청</summary>
-        ///<param name="arg1">화면번호 : 0299</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
-        public void GetOPT10050(string arg1, string arg2)
+        public void GetOPT10050(string arg2)
         {
             string screenCode = "0299";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             CommRqData("ELW민감도지표요청", "OPT10050", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT10051 기능명:업종별투자자순매수요청</summary>
-        ///<param name="arg1">화면번호 : 0797</param>
         ///<param name="arg2">시장구분 : 코스피:0, 코스닥:1</param>
         ///<param name="arg3">금액수량구분 : 금액:0, 수량:1</param>
         ///<param name="arg4">기준일자 : YYYYMMDD (20170101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT10051(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10051(string arg2, string arg3, string arg4)
         {
             string screenCode = "0797";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("금액수량구분", arg3);
             SetInputValue("기준일자", arg4);
@@ -1229,15 +1216,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10052 기능명:거래원순간거래량요청</summary>
-        ///<param name="arg1">화면번호 : 0127</param>
         ///<param name="arg2">회원사코드 : 888:외국계 전체, 나머지 회원사 코드는 OPT10042 조회 또는 GetBranchCodeName()함수사용</param>
         ///<param name="arg3">시장구분 : 0:전체, 1:코스피, 2:코스닥, 3:종목</param>
         ///<param name="arg4">수량구분 : 0:전체, 1:1000주, 2:2000주, 3:, 5:, 10:10000주, 30: 30000주, 50: 50000주, 100: 100000주</param>
         ///<param name="arg5">가격구분 : 0:전체, 1:1천원 미만, 8:1천원 이상, 2:1천원 ~ 2천원, 3:2천원 ~ 5천원, 4:5천원 ~ 1만원, 5:1만원 이상</param>
-        public void GetOPT10052(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT10052(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0127";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("회원사코드", arg2);
             SetInputValue("시장구분", arg3);
             SetInputValue("수량구분", arg4);
@@ -1249,7 +1235,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10053(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("당일상위이탈원요청", "OPT10053", 0, GetScrNum());
         }
 
@@ -1286,22 +1272,21 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">당일전일 : 1:당일,	2:전일</param>
         public void GetOPT10055(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("당일전일", arg2);
             CommRqData("당일전일체결대량요청", "OPT10055", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPT10058 기능명:투자자별일별매매종목요청</summary>
-        ///<param name="arg1">화면번호 : 0795</param>
         ///<param name="arg2">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">매매구분 : 전체:순매수(2)/순매도(1) 각각조회해서 비교, 순매도:1, 순매수:2</param>
         ///<param name="arg5">시장구분 : 001:코스피, 101:코스닥</param>
         ///<param name="arg6">투자자구분 : 8000:개인, 9000:외국인, 1000:금융투자, 3000:투신, 5000:기타금융, 4000:은행, 2000:보험, 6000:연기금, 7000:국가, 7100:기타법인, 9999:기관계</param>
-        public void GetOPT10058(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT10058(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0795";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시작일자", arg2);
             SetInputValue("종료일자", arg3);
             SetInputValue("매매구분", arg4);
@@ -1311,16 +1296,15 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10059 기능명:종목별투자자기관별요청</summary>
-        ///<param name="arg1">화면번호 : 0796</param>
         ///<param name="arg2">일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg4">금액수량구분 : 1:금액, 2:수량</param>
         ///<param name="arg5">매매구분 : 0:순매수, 1:매수, 2:매도</param>
         ///<param name="arg6">단위구분 : 1000:천주, 1:단주</param>
-        public void GetOPT10059(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT10059(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0796";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("일자", arg2);
             SetInputValue("종목코드", arg3);
             SetInputValue("금액수량구분", arg4);
@@ -1330,16 +1314,15 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10060 기능명:종목별투자자기관별차트요청</summary>
-        ///<param name="arg1">화면번호 : 0796</param>
         ///<param name="arg2">일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg4">금액수량구분 : 1:금액, 2:수량</param>
         ///<param name="arg5">매매구분 : 0:순매수, 1:매수, 2:매도</param>
         ///<param name="arg6">단위구분 : 1000:천주, 1:단주</param>
-        public void GetOPT10060(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT10060(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0796";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("일자", arg2);
             SetInputValue("종목코드", arg3);
             SetInputValue("금액수량구분", arg4);
@@ -1349,17 +1332,16 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10061 기능명:종목별투자자기관별합계요청</summary>
-        ///<param name="arg1">화면번호 : 0796</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg5">금액수량구분 : 1:금액, 2:수량</param>
         ///<param name="arg6">매매구분 : 0:순매수, 1:매수, 2:매도</param>
         ///<param name="arg7">단위구분 : 1000:천주, 1:단주</param>
-        public void GetOPT10061(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
+        public void GetOPT10061(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
             string screenCode = "0796";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("시작일자", arg3);
             SetInputValue("종료일자", arg4);
@@ -1370,17 +1352,16 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10062 기능명:동일순매매순위요청</summary>
-        ///<param name="arg1">화면번호 : 0798</param>
         ///<param name="arg2">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">시장구분 : 000:전체, 001: 코스피, 101:코스닥</param>
         ///<param name="arg5">매매구분 : 1:순매수, 2:순매도</param>
         ///<param name="arg6">정렬조건 : 1:수량, 2:금액</param>
         ///<param name="arg7">단위구분 : 1:단주, 1000:천주</param>
-        public void GetOPT10062(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
+        public void GetOPT10062(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
             string screenCode = "0798";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시작일자", arg2);
             SetInputValue("종료일자", arg3);
             SetInputValue("시장구분", arg4);
@@ -1421,14 +1402,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10065 기능명:장중투자자별매매상위요청</summary>
-        ///<param name="arg1">화면번호 : 1053</param>
         ///<param name="arg2">매매구분 : 1:순매수, 2:순매도</param>
         ///<param name="arg3">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg4">기관구분 : 9000:외국인, 9100:외국계, 1000:금융투자, 3000:투신, 5000:기타금융, 4000:은행, 2000:보험, 6000:연기금, 7000:국가, 7100:기타법인, 9999:기관계</param>
-        public void GetOPT10065(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10065(string arg2, string arg3, string arg4)
         {
             string screenCode = "1053";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("매매구분", arg2);
             SetInputValue("시장구분", arg3);
             SetInputValue("기관구분", arg4);
@@ -1436,15 +1416,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10066 기능명:장중투자자별매매차트요청</summary>
-        ///<param name="arg1">화면번호 : 1054</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">금액수량구분 : 1:금액, 2:수량</param>
         ///<param name="arg4">매매구분 : 0:순매수, 1:매수, 2:매도</param>
         ///<param name="arg5">종목코드 : 전문 조회할 종목코드</param>
-        public void GetOPT10066(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT10066(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "1054";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("금액수량구분", arg3);
             SetInputValue("매매구분", arg4);
@@ -1453,28 +1432,26 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10067 기능명:대차거래내역요청</summary>
-        ///<param name="arg1">화면번호 : 1060</param>
         ///<param name="arg2">기준일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">시장구분 : 001:코스피, 101:코스닥</param>
-        public void GetOPT10067(string arg1, string arg2, string arg3)
+        public void GetOPT10067(string arg2, string arg3)
         {
             string screenCode = "1060";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("기준일자", arg2);
             SetInputValue("시장구분", arg3);
             CommRqData("대차거래내역요청", "OPT10067", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT10068 기능명:대차거래추이요청</summary>
-        ///<param name="arg1">화면번호 : 1061</param>
         ///<param name="arg2">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">전체구분 : 1: 전체표시, 0:종목코드 (지원안함. OPT20068사용).</param>
         ///<param name="arg5">종목코드 : 전문 조회할 종목코드</param>
-        public void GetOPT10068(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT10068(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "1061";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시작일자", arg2);
             SetInputValue("종료일자", arg3);
             SetInputValue("전체구분", arg4);
@@ -1483,14 +1460,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10069 기능명:대차거래상위10종목요청</summary>
-        ///<param name="arg1">화면번호 : 1062</param>
         ///<param name="arg2">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">시장구분 : 001:코스피, 101:코스닥</param>
-        public void GetOPT10069(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10069(string arg2, string arg3, string arg4)
         {
             string screenCode = "1062";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시작일자", arg2);
             SetInputValue("종료일자", arg3);
             SetInputValue("시장구분", arg4);
@@ -1501,18 +1477,17 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10070(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("당일주요거래원요청", "OPT10070", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPT10071 기능명:시간대별전일비거래비중요청</summary>
-        ///<param name="arg1">화면번호 : 0125</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">시간구분 : 1:1분,3:3분,5:5분,10:10분,15:15분,30:30분,60:60분</param>
-        public void GetOPT10071(string arg1, string arg2, string arg3)
+        public void GetOPT10071(string arg2, string arg3)
         {
             string screenCode = "0125";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("시간구분", arg3);
             CommRqData("시간대별전일비거래비중요청", "OPT10071", 0, screenCode);
@@ -1545,14 +1520,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10074 기능명:일자별실현손익요청</summary>
-        ///<param name="arg1">화면번호 : 0329</param>
         ///<param name="arg2">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg3">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT10074(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10074(string arg2, string arg3, string arg4)
         {
             string screenCode = "0329";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("계좌번호", arg2);
             SetInputValue("시작일자", arg3);
             SetInputValue("종료일자", arg4);
@@ -1560,14 +1534,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10075 기능명:실시간미체결요청</summary>
-        ///<param name="arg1">화면번호 : 0341</param>
         ///<param name="arg2">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg3">체결구분 : 0:체결+미체결조회, 1:미체결조회, 2:체결조회</param>
         ///<param name="arg4">매매구분 : 0:전체, 1:매도, 2:매수</param>
-        public void GetOPT10075(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10075(string arg2, string arg3, string arg4)
         {
             string screenCode = "0341";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("계좌번호", arg2);
             SetInputValue("체결구분", arg3);
             SetInputValue("매매구분", arg4);
@@ -1575,17 +1548,16 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10076 기능명:실시간체결요청</summary>
-        ///<param name="arg1">화면번호 : 0350</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">조회구분 : 0:전체, 1:종목</param>
         ///<param name="arg4">매매구분 : 0:전체, 1:매도, 2:매수</param>
         ///<param name="arg5">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg6">비밀번호 : 사용안함(공백)</param>
         ///<param name="arg7">모름3 : </param>
-        public void GetOPT10076(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
+        public void GetOPT10076(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
             string screenCode = "0350";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("조회구분", arg3);
             SetInputValue("매매구분", arg4);
@@ -1596,14 +1568,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10077 기능명:당일실현손익상세요청</summary>
-        ///<param name="arg1">화면번호 : 0355</param>
         ///<param name="arg2">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg3">비밀번호 : 사용안함(공백)</param>
         ///<param name="arg4">종목코드 : 전문 조회할 종목코드</param>
-        public void GetOPT10077(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10077(string arg2, string arg3, string arg4)
         {
             string screenCode = "0355";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("계좌번호", arg2);
             SetInputValue("비밀번호", arg3);
             SetInputValue("종목코드", arg4);
@@ -1611,15 +1582,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10078 기능명:증권사별종목매매동향요청</summary>
-        ///<param name="arg1">화면번호 : 0350</param>
         ///<param name="arg2">회원사코드 : 888:외국계 전체, 나머지 회원사 코드는 OPT10042 조회 또는 GetBranchCodeName()함수사용</param>
         ///<param name="arg3">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg4">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg5">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT10078(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT10078(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0350";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("회원사코드", arg2);
             SetInputValue("종목코드", arg3);
             SetInputValue("시작일자", arg4);
@@ -1628,14 +1598,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT10079 기능명:주식틱차트조회요청</summary>
-        ///<param name="arg1">화면번호 : 0612</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">틱범위 : 1:1틱, 3:3틱, 5:5틱, 10:10틱, 30:30틱</param>
         ///<param name="arg4">수정주가구분 : 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할, 16:액면병합, 32:기업합병, 64:감자, 256:권리락</param>
-        public void GetOPT10079(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT10079(string arg2, string arg3, string arg4)
         {
             string screenCode = "0612";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("틱범위", arg3);
             SetInputValue("수정주가구분", arg4);
@@ -1648,7 +1617,8 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg3">수정주가구분 : 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할, 16:액면병합, 32:기업합병, 64:감자, 256:권리락</param>
         public void GetOPT10080(string arg1, string arg2, string arg3)
         {
-            SetInputValue("종목코드", arg1);
+            StockCode = arg1;
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("틱범위", arg2);
             SetInputValue("수정주가구분", arg3);
             CommRqData("주식분봉차트조회요청", "OPT10080", 0, GetScrNum());
@@ -1660,7 +1630,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg3">수정주가구분 : 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할, 16:액면병합, 32:기업합병, 64:감자, 256:권리락 (각 값은 서로 조합해서 수신될 수 있음. 예를 들면 6: 무상증자 + 배당락, 288: 기업합병+권리락)</param>
         public void GetOPT10081(string arg1, string arg2, string arg3)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             SetInputValue("수정주가구분", arg3);
             CommRqData("주식일봉차트조회요청", "OPT10081", 0, GetScrNum());
@@ -1672,7 +1642,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg3">수정주가구분 : 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할, 16:액면병합, 32:기업합병, 64:감자, 256:권리락</param>
         public void GetOPT10082(string arg1, string arg2, string arg3)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             SetInputValue("수정주가구분", arg3);
             CommRqData("주식주봉차트조회요청", "OPT10082", 0, GetScrNum());
@@ -1684,7 +1654,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg3">수정주가구분 : 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할, 16:액면병합, 32:기업합병, 64:감자, 256:권리락</param>
         public void GetOPT10083(string arg1, string arg2, string arg3)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             SetInputValue("수정주가구분", arg3);
             CommRqData("주식월봉차트조회요청", "OPT10083", 0, GetScrNum());
@@ -1697,7 +1667,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg4">시간 : 조회시간 4자리, 오전 9시일 경우 '0900', 오후 2시 30분일 경우 '1430'</param>
         public void GetOPT10084(string arg1, string arg2, string arg3, string arg4)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("당일전일", arg2);
             SetInputValue("틱분", arg3);
             SetInputValue("시간", arg4);
@@ -1718,7 +1688,8 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg3">표시구분 : 0:수량, 1:금액(백만원)</param>
         public void GetOPT10086(string arg1, string arg2, string arg3)
         {
-            SetInputValue("종목코드", arg1);
+            
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("조회일자", arg2);
             SetInputValue("표시구분", arg3);
             CommRqData("일별주가요청", "OPT10086", 0, GetScrNum());
@@ -1728,7 +1699,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10087(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("시간외단일가요청", "OPT10087", 0, GetScrNum());
         }
 
@@ -1739,7 +1710,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg4">수정주가구분 : 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할, 16:액면병합, 32:기업합병, 64:감자, 256:권리락</param>
         public void GetOPT10094(string arg1, string arg2, string arg3, string arg4)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             SetInputValue("끝일자", arg3);
             SetInputValue("수정주가구분", arg4);
@@ -1747,38 +1718,35 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT20001 기능명:업종현재가요청</summary>
-        ///<param name="arg1">화면번호 : 0211</param>
         ///<param name="arg2">시장구분 : 0:코스피, 1:코스닥, 2:코스피200</param>
         ///<param name="arg3">업종코드 : 001:종합(KOSPI), 002:대형주, 003:중형주, 004:소형주 101:종합(KOSDAQ), 201:KOSPI200, 302:KOSTAR, 701: KRX100 나머지 ※ 업종코드 참고</param>
-        public void GetOPT20001(string arg1, string arg2, string arg3)
+        public void GetOPT20001(string arg2, string arg3)
         {
             string screenCode = "0211";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("업종코드", arg3);
             CommRqData("업종현재가요청", "OPT20001", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT20002 기능명:업종별주가요청</summary>
-        ///<param name="arg1">화면번호 : 0213</param>
         ///<param name="arg2">시장구분 : 0:코스피, 1:코스닥, 2:코스피200</param>
         ///<param name="arg3">업종코드 : 001:종합(KOSPI), 002:대형주, 003:중형주, 004:소형주 101:종합(KOSDAQ), 201:KOSPI200, 302:KOSTAR, 701: KRX100 나머지 ※ 업종코드 참고</param>
-        public void GetOPT20002(string arg1, string arg2, string arg3)
+        public void GetOPT20002(string arg2, string arg3)
         {
             string screenCode = "0213";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("업종코드", arg3);
             CommRqData("업종별주가요청", "OPT20002", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT20003 기능명:전업종지수요청</summary>
-        ///<param name="arg1">화면번호 : 0214</param>
         ///<param name="arg2">업종코드 : 001:종합(KOSPI), 002:대형주, 003:중형주, 004:소형주 101:종합(KOSDAQ), 201:KOSPI200, 302:KOSTAR, 701: KRX100 나머지 ※ 업종코드 참고</param>
-        public void GetOPT20003(string arg1, string arg2)
+        public void GetOPT20003(string arg2)
         {
             string screenCode = "0214";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("업종코드", arg2);
             CommRqData("전업종지수요청", "OPT20003", 0, screenCode);
         }
@@ -1866,15 +1834,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT20068 기능명:대차거래추이요청(종목별)</summary>
-        ///<param name="arg1">화면번호 : 1061</param>
         ///<param name="arg2">시작일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">종료일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg4">전체구분 : 0:종목코드 입력종목만 표시, 1: 전체표시(지원안함. OPT10068사용).</param>
         ///<param name="arg5">종목코드 : 전문 조회할 종목코드</param>
-        public void GetOPT20068(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT20068(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "1061";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시작일자", arg2);
             SetInputValue("종료일자", arg3);
             SetInputValue("전체구분", arg4);
@@ -1883,7 +1850,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT30001 기능명:ELW가격급등락요청</summary>
-        ///<param name="arg1">화면번호 : 0272</param>
         ///<param name="arg2">등락구분 : 1:급등, 2:급락</param>
         ///<param name="arg3">시간구분 : 1:분전, 2:일전</param>
         ///<param name="arg4">시간 : </param>
@@ -1893,10 +1859,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg8">권리구분 : 000:전체, 001:콜, 002:풋, 003:DC, 004:DP, 005:EX, 006:조기종료콜, 007:조기종료풋</param>
         ///<param name="arg9">LP코드 : ※ LP코드 참고</param>
         ///<param name="arg10">거래종료ELW제외 : </param>
-        public void GetOPT30001(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10)
+        public void GetOPT30001(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10)
         {
             string screenCode = "0272";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("등락구분", arg2);
             SetInputValue("시간구분", arg3);
             SetInputValue("시간", arg4);
@@ -1910,16 +1876,15 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT30002 기능명:거래원별ELW순매매상위요청</summary>
-        ///<param name="arg1">화면번호 : 0273</param>
         ///<param name="arg2">발행사코드 : ※ 발행사코드 참고 </param>
         ///<param name="arg3">거래량구분 : 0:전체, 5:5천주, 10:만주, 50:5만주, 100:10만주, 500:50만주, 1000:백만주</param>
         ///<param name="arg4">매매구분 : 1:순매수, 2:순매도</param>
         ///<param name="arg5">기간 : 1:전일, 5:5일, 10:10일, 40:40일, 60:60일</param>
         ///<param name="arg6">거래종료ELW제외 : </param>
-        public void GetOPT30002(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT30002(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0273";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("발행사코드", arg2);
             SetInputValue("거래량구분", arg3);
             SetInputValue("매매구분", arg4);
@@ -1929,29 +1894,27 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT30003 기능명:ELW LP보유일별추이요청</summary>
-        ///<param name="arg1">화면번호 : 0285</param>
         ///<param name="arg2">기초자산코드 : ※ 기초자산코드 참고</param>
         ///<param name="arg3">기준일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT30003(string arg1, string arg2, string arg3)
+        public void GetOPT30003(string arg2, string arg3)
         {
             string screenCode = "0285";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("기초자산코드", arg2);
             SetInputValue("기준일자", arg3);
             CommRqData("ELW LP보유일별추이요청", "OPT30003", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT30004 기능명:ELW괴리율요청</summary>
-        ///<param name="arg1">화면번호 : 0287</param>
         ///<param name="arg2">발행사코드 : ※ 발행사 코드 참고</param>
         ///<param name="arg3">기초자산코드 : ※ 기초자산 코드 참고</param>
         ///<param name="arg4">권리구분 : 000: 전체, 001: 콜, 002: 풋, 003: DC, 004: DP, 005: EX, 006: 조기종료콜, 007: 조기종료풋</param>
         ///<param name="arg5">LP코드 : ※ LP코드 참고</param>
         ///<param name="arg6">거래종료ELW제외 : 1:거래종료ELW제외, 0:거래종료ELW포함</param>
-        public void GetOPT30004(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT30004(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0287";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("발행사코드", arg2);
             SetInputValue("기초자산코드", arg3);
             SetInputValue("권리구분", arg4);
@@ -1977,17 +1940,16 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT30007 기능명:ELW종목상세요청</summary>
-        ///<param name="arg1">화면번호 : 0290</param>
         ///<param name="arg2">발행사코드 : ※ 발행사코드 참고</param>
         ///<param name="arg3">기초자산코드 : ※ 기초자산코드 참고</param>
         ///<param name="arg4">권리구분 : 000:전체, 001:콜, 002:풋, 003:DC, 004:DP, 006:조기종료콜, 007:조기종료풋</param>
         ///<param name="arg5">LP코드 : ※ LP코드 참고</param>
         ///<param name="arg6">정렬구분 : </param>
         ///<param name="arg7">거래종료ELW제외 : 1:거래종료제외, 0:거래종료포함</param>
-        public void GetOPT30007(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
+        public void GetOPT30007(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
             string screenCode = "0290";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("발행사코드", arg2);
             SetInputValue("기초자산코드", arg3);
             SetInputValue("권리구분", arg4);
@@ -2001,19 +1963,18 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT30008(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("ELW민감도지표요청", "OPT30008", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPT30009 기능명:ELW등락율순위요청</summary>
-        ///<param name="arg1">화면번호 : 0293</param>
         ///<param name="arg2">정렬구분 : 1:상승률, 2:상승폭, 3:하락률, 4:하락폭</param>
         ///<param name="arg3">권리구분 : 000:전체, 001:콜, 002:풋, 003:DC, 004:DP, 006:조기종료콜, 007:조기종료풋</param>
         ///<param name="arg4">거래종료제외 : 1:거래종료제외, 0:거래종료포함</param>
-        public void GetOPT30009(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT30009(string arg2, string arg3, string arg4)
         {
             string screenCode = "0293";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("정렬구분", arg2);
             SetInputValue("권리구분", arg3);
             SetInputValue("거래종료제외", arg4);
@@ -2021,14 +1982,13 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT30010 기능명:ELW잔량순위요청</summary>
-        ///<param name="arg1">화면번호 : 0294</param>
         ///<param name="arg2">정렬구분 : 1:순매수잔량상위, 2: 순매도 잔량상위</param>
         ///<param name="arg3">권리구분 : 000: 전체, 001: 콜, 002: 풋, 003: DC, 004: DP, 006: 조기종료콜, 007: 조기종료풋</param>
         ///<param name="arg4">거래종료제외 : 1:거래종료제외, 0:거래종료포함</param>
-        public void GetOPT30010(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT30010(string arg2, string arg3, string arg4)
         {
             string screenCode = "0294";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("정렬구분", arg2);
             SetInputValue("권리구분", arg3);
             SetInputValue("거래종료제외", arg4);
@@ -2039,7 +1999,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT30011(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("ELW근접율요청", "OPT30011", 0, GetScrNum());
         }
 
@@ -2047,19 +2007,18 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT30012(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("ELW종목상세정보요청", "OPT30012", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPT40001 기능명:ETF수익율요청</summary>
-        ///<param name="arg1">화면번호 : 0275</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg3">사용안함 : "201" or 공백</param>
         ///<param name="arg4">기간 : 0:1주, 1:1달, 2:6개월, 3:1년</param>
-        public void GetOPT40001(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT40001(string arg2, string arg3, string arg4)
         {
             string screenCode = "0275";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             SetInputValue("사용안함", arg3);
             SetInputValue("기간", arg4);
@@ -2070,7 +2029,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT40002(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("ETF종목정보요청", "OPT40002", 0, GetScrNum());
         }
 
@@ -2078,21 +2037,20 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT40003(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("ETF일별추이요청", "OPT40003", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPT40004 기능명:ETF전체시세요청</summary>
-        ///<param name="arg1">화면번호 : 0278</param>
         ///<param name="arg2">과세유형 : 0:전체, 1:수익증권형 국내주식, 2:수익증권형, 3:회사형, 4:외국</param>
         ///<param name="arg3">NAV대비 : 0:전체, 1:NAV > 전일종가, 2:NAV < 전일종가</param>
         ///<param name="arg4">운용사 : 000000:전체, 410100:KODEX(삼성), 410260:KOSEF(우리), 410810:TIGER(미래에셋), 410200:KINDEX(한국투자), 410223:KStar(KB), 410220:아리랑(한화), 999999:기타운용사</param>
         ///<param name="arg5">과세여부 : 0:전체, 1:거래세비과세, 2:보유기간비과세, 3:거래세과세, 4:보유기간과세</param>
         ///<param name="arg6">추적지수 : ※  </param>
-        public void GetOPT40004(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT40004(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0278";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("과세유형", arg2);
             SetInputValue("NAV대비", arg3);
             SetInputValue("운용사", arg4);
@@ -2102,27 +2060,25 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT40005 기능명:ETF일별추이요청</summary>
-        ///<param name="arg1">화면번호 : 0279</param>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
-        public void GetOPT40005(string arg1, string arg2)
+        public void GetOPT40005(string arg2)
         {
             string screenCode = "0279";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("종목코드", arg2);
             CommRqData("ETF일별추이요청", "OPT40005", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT40006 기능명:ETF시간대별추이요청</summary>
-        ///<param name="arg1">화면번호 : 0279</param>
         ///<param name="arg2">과세유형 : 0:전체, 1:수익증권형 국내주식, 2:수익증권형, 3:회사형, 4:외국</param>
         ///<param name="arg3">NAV대비 : 0:전체, 1:NAV > 전일종가, 2:NAV < 전일종가</param>
         ///<param name="arg4">운용사 : 000000:전체, 410100:KODEX(삼성), 410260:KOSEF(우리), 410810:TIGER(미래에셋), 410200:KINDEX(한국투자), 410223:KStar(KB), 410220:아리랑(한화), 999999:기타운용사</param>
         ///<param name="arg5">과세여부 : 0:전체, 1:거래세비과세, 2:보유기간비과세, 3:거래세과세, 4:보유기간과세</param>
         ///<param name="arg6">추적지수 : ※  </param>
-        public void GetOPT40006(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT40006(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0279";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("과세유형", arg2);
             SetInputValue("NAV대비", arg3);
             SetInputValue("운용사", arg4);
@@ -2135,7 +2091,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT40007(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("ETF시간대별체결요청", "OPT40007", 0, GetScrNum());
         }
 
@@ -2143,7 +2099,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT40008(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("ETF시간대별체결요청", "OPT40008", 0, GetScrNum());
         }
 
@@ -2151,7 +2107,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT40009(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("ETF시간대별체결요청", "OPT40009", 0, GetScrNum());
         }
 
@@ -2159,7 +2115,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT40010(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("ETF시간대별추이요청", "OPT40010", 0, GetScrNum());
         }
 
@@ -2167,7 +2123,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT50001(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("선옵현재가정보요청", "OPT50001", 0, GetScrNum());
         }
 
@@ -2175,7 +2131,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT50002(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("선옵일자별체결요청", "OPT50002", 0, GetScrNum());
         }
 
@@ -2183,7 +2139,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT50003(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("선옵시고저가요청", "OPT50003", 0, GetScrNum());
         }
 
@@ -2199,7 +2155,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT50005(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("선옵시간별거래량요청", "OPT50005", 0, GetScrNum());
         }
 
@@ -2207,7 +2163,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT50006(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("선옵체결추이요청", "OPT50006", 0, GetScrNum());
         }
 
@@ -2217,7 +2173,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg3">시간검색 : 지원안함</param>
         public void GetOPT50007(string arg1, string arg2, string arg3)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             SetInputValue("시간검색", arg3);
             CommRqData("선물시세추이요청", "OPT50007", 0, GetScrNum());
@@ -2228,7 +2184,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간구분 : 1만 가능</param>
         public void GetOPT50008(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간구분", arg2);
             CommRqData("프로그램매매추이차트요청", "OPT50008", 0, GetScrNum());
         }
@@ -2238,7 +2194,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간구분 : 1만 가능</param>
         public void GetOPT50009(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간구분", arg2);
             CommRqData("선옵시간별잔량요청", "OPT50009", 0, GetScrNum());
         }
@@ -2248,7 +2204,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간구분 : 1만 가능</param>
         public void GetOPT50010(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간구분", arg2);
             CommRqData("선옵호가잔량추이요청", "OPT50010", 0, GetScrNum());
         }
@@ -2259,7 +2215,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg3">시간구분 : 1만 가능</param>
         public void GetOPT50011(string arg1, string arg2, string arg3)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위 ", arg2);
             SetInputValue("시간구분", arg3);
             CommRqData("선옵호가잔량추이요청", "OPT50011", 0, GetScrNum());
@@ -2270,7 +2226,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : 30초:00, 1분:01, 5분:05, 10분:10, 30분:30, 1일:99</param>
         public void GetOPT50012(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("선옵타임스프레드차트요청", "OPT50012", 0, GetScrNum());
         }
@@ -2280,7 +2236,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">봉갯수 : 봉갯수</param>
         public void GetOPT50013(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("봉갯수", arg2);
             CommRqData("선물가격대별비중차트요청", "OPT50013", 0, GetScrNum());
         }
@@ -2290,7 +2246,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">봉갯수 : 봉갯수</param>
         public void GetOPT50014(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("봉갯수", arg2);
             CommRqData("선물가격대별비중차트요청", "OPT50014", 0, GetScrNum());
         }
@@ -2300,7 +2256,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         public void GetOPT50015(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("선물미결제약정일차트요청", "OPT50015", 0, GetScrNum());
         }
@@ -2310,7 +2266,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         public void GetOPT50016(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("베이시스추이차트요청", "OPT50016", 0, GetScrNum());
         }
@@ -2320,7 +2276,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         public void GetOPT50017(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("베이시스추이차트요청", "OPT50017", 0, GetScrNum());
         }
@@ -2337,7 +2293,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT50019(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("선물옵션현재가정보요청", "OPT50019", 0, GetScrNum());
         }
 
@@ -2370,7 +2326,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간구분 : 분 단위시간 입력(예 1:1분, 3:3분, 5:5분, 10:10분, 30:30분)</param>
         public void GetOPT50023(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간구분", arg2);
             CommRqData("민감도지표추이요청", "OPT50023", 0, GetScrNum());
         }
@@ -2410,7 +2366,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg4">체결구분 : 0:전체, 1:미체결내역, 2:체결내역</param>
         public void GetOPT50026(string arg1, string arg2, string arg3, string arg4)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("조회구분", arg2);
             SetInputValue("매매구분", arg3);
             SetInputValue("체결구분", arg4);
@@ -2430,7 +2386,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : 1틱:1, 3틱:3, 5:5틱:5, 10틱:10, 20틱:20, 30틱:30, 60틱:60, 120틱:120</param>
         public void GetOPT50028(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("선물틱차트요청", "OPT50028", 0, GetScrNum());
         }
@@ -2440,7 +2396,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : 1분:1, 3분:3, 5분:5, 10분:10, 15분:15, 30분:30, 60분:60, 120분:120</param>
         public void GetOPT50029(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("선물분차트요청", "OPT50029", 0, GetScrNum());
         }
@@ -2450,7 +2406,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">기준일자 : YYYYMM, 6자리</param>
         public void GetOPT50030(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             CommRqData("선물일차트요청", "OPT50030", 0, GetScrNum());
         }
@@ -2478,7 +2434,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">기준일자 : YYYYMM, 6자리</param>
         public void GetOPT50033(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             CommRqData("선옵잔존일조회요청", "OPT50033", 0, GetScrNum());
         }
@@ -2488,7 +2444,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">기간 : 5:5일, 10:10일, 20:20일, 60:60일, 250:250일, 250일까지 입력가능</param>
         public void GetOPT50034(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기간", arg2);
             CommRqData("선옵전일가격요청", "OPT50034", 0, GetScrNum());
         }
@@ -2500,7 +2456,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg4">차트구분 : 일차트:0, 주차트:1, 월차트:2</param>
         public void GetOPT50035(string arg1, string arg2, string arg3, string arg4)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             SetInputValue("기간", arg3);
             SetInputValue("차트구분", arg4);
@@ -2514,7 +2470,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg4">차트구분 : 일차트:0, 주차트:1, 월차트:2</param>
         public void GetOPT50036(string arg1, string arg2, string arg3, string arg4)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             SetInputValue("기간", arg3);
             SetInputValue("차트구분", arg4);
@@ -2526,7 +2482,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">기준일자 : YYYYMMDD, 8자리</param>
         public void GetOPT50037(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             CommRqData("코스피200지수요청", "OPT50037", 0, GetScrNum());
         }
@@ -2549,7 +2505,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 코스피200 지수 선물만 가능</param>
         public void GetOPT50040(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("선옵시고저가요청", "OPT50040", 0, GetScrNum());
         }
 
@@ -2574,7 +2530,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : 30초:00, 1분:01, 5분:05, 10분:10, 30분:30, 1시간:60</param>
         public void GetOPT50062(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("선물미결제약정분차트요청", "OPT50062", 0, GetScrNum());
         }
@@ -2584,7 +2540,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         public void GetOPT50063(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("옵션미결제약정일차트요청", "OPT50063", 0, GetScrNum());
         }
@@ -2594,7 +2550,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : 30초:00, 1분:01, 5분:05, 10분:10, 30분:30, 1시간:60</param>
         public void GetOPT50064(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("옵션미결제약정분차트요청", "OPT50064", 0, GetScrNum());
         }
@@ -2612,7 +2568,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : 1틱:1, 3틱:3, 5:5틱:5, 10틱:10, 20틱:20, 30틱:30, 60틱:60, 120틱:120</param>
         public void GetOPT50066(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("옵션틱차트요청", "OPT50066", 0, GetScrNum());
         }
@@ -2622,7 +2578,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">시간단위 : 1분:1, 3분:3, 5분:5, 10분:10, 15분:15, 30분:30, 60분:60, 120분:120</param>
         public void GetOPT50067(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("시간단위", arg2);
             CommRqData("옵션분차트요청", "OPT50067", 0, GetScrNum());
         }
@@ -2632,7 +2588,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">기준일자 : YYYYMM, 6자리</param>
         public void GetOPT50068(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             CommRqData("옵션일차트요청", "OPT50068", 0, GetScrNum());
         }
@@ -2642,7 +2598,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">기준일자 : YYYYMMDD, 8자리</param>
         public void GetOPT50071(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             CommRqData("선물주차트요청", "OPT50071", 0, GetScrNum());
         }
@@ -2652,7 +2608,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">기준일자 : YYYYMMDD, 8자리</param>
         public void GetOPT50072(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             CommRqData("선물월차트요청", "OPT50072", 0, GetScrNum());
         }
@@ -2662,22 +2618,21 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg2">기준일자 : YYYYMMDD, 8자리</param>
         public void GetOPT50073(string arg1, string arg2)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("기준일자", arg2);
             CommRqData("선물년차트요청", "OPT50073", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPT90001 기능명:테마그룹별요청</summary>
-        ///<param name="arg1">화면번호 : 0650</param>
         ///<param name="arg2">검색구분 : 0:전체검색, 1:테마검색, 2:종목검색</param>
         ///<param name="arg3">종목코드 : 검색하려는 종목코드</param>
         ///<param name="arg4">날짜구분 : 1일 ~ 99일 날짜입력</param>
         ///<param name="arg5">테마명 : 검색하려는 테마명</param>
         ///<param name="arg6">등락수익구분 : 1:상위기간수익률, 2:하위기간수익률, 3:상위등락률, 4:하위등락률</param>
-        public void GetOPT90001(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT90001(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0650";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("검색구분", arg2);
             SetInputValue("종목코드", arg3);
             SetInputValue("날짜구분", arg4);
@@ -2687,27 +2642,25 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT90002 기능명:테마구성종목요청</summary>
-        ///<param name="arg1">화면번호 : 0651</param>
         ///<param name="arg2">날짜구분 : 1일 ~ 99일 날짜입력</param>
         ///<param name="arg3">종목코드 : 테마그룹코드 번호</param>
-        public void GetOPT90002(string arg1, string arg2, string arg3)
+        public void GetOPT90002(string arg2, string arg3)
         {
             string screenCode = "0651";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("날짜구분", arg2);
             SetInputValue("종목코드", arg3);
             CommRqData("테마구성종목요청", "OPT90002", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT90003 기능명:프로그램순매수상위50요청</summary>
-        ///<param name="arg1">화면번호 : 0766</param>
         ///<param name="arg2">매매상위구분 : 1:순매도상위, 2:순매수상위</param>
         ///<param name="arg3">금액수량구분 : 1:금액, 2:수량</param>
         ///<param name="arg4">시장구분 : P00101:코스피, P10102:코스닥</param>
-        public void GetOPT90003(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT90003(string arg2, string arg3, string arg4)
         {
             string screenCode = "0766";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("매매상위구분", arg2);
             SetInputValue("금액수량구분", arg3);
             SetInputValue("시장구분", arg4);
@@ -2715,29 +2668,27 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT90004 기능명:종목별프로그램매매현황요청</summary>
-        ///<param name="arg1">화면번호 : 0767</param>
         ///<param name="arg2">일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">시장구분 : P00101:코스피, P10102:코스닥</param>
-        public void GetOPT90004(string arg1, string arg2, string arg3)
+        public void GetOPT90004(string arg2, string arg3)
         {
             string screenCode = "0767";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("일자", arg2);
             SetInputValue("시장구분", arg3);
             CommRqData("종목별프로그램매매현황요청", "OPT90004", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT90005 기능명:프로그램매매추이요청</summary>
-        ///<param name="arg1">화면번호 : 0768</param>
         ///<param name="arg2">날짜 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">시간구분 : 1:시간대별, 2:일자별</param>
         ///<param name="arg4">금액수량구분 : 1:금액(백만원), 2:수량(천주)</param>
         ///<param name="arg5">시장구분 : P00101:코스피, P10102:코스닥</param>
         ///<param name="arg6">분틱구분 : 0:틱, 1:분</param>
-        public void GetOPT90005(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPT90005(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0768";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("날짜", arg2);
             SetInputValue("시간구분", arg3);
             SetInputValue("금액수량구분", arg4);
@@ -2747,25 +2698,23 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT90006 기능명:프로그램매매차익잔고추이요청</summary>
-        ///<param name="arg1">화면번호 : 0773</param>
         ///<param name="arg2">날짜 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT90006(string arg1, string arg2)
+        public void GetOPT90006(string arg2)
         {
             string screenCode = "0773";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("날짜", arg2);
             CommRqData("프로그램매매차익잔고추이요청", "OPT90006", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT90007 기능명:프로그램매매누적추이요청</summary>
-        ///<param name="arg1">화면번호 : 0777</param>
         ///<param name="arg2">날짜 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식), 종료일기준 1년간 데이터만 조회가능</param>
         ///<param name="arg3">금액수량구분 : 1:금액, 2:수량</param>
         ///<param name="arg4">시장구분 : P10101:코스피, P10102:코스닥</param>
-        public void GetOPT90007(string arg1, string arg2, string arg3, string arg4)
+        public void GetOPT90007(string arg2, string arg3, string arg4)
         {
             string screenCode = "0777";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("날짜", arg2);
             SetInputValue("금액수량구분", arg3);
             SetInputValue("시장구분", arg4);
@@ -2773,15 +2722,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT90008 기능명:종목시간별프로그램매매추이요청</summary>
-        ///<param name="arg1">화면번호 : 0778</param>
         ///<param name="arg2">시간일자구분 : 1:시간대별</param>
         ///<param name="arg3">금액수량구분 : 1:금액, 2:수량</param>
         ///<param name="arg4">종목코드 : </param>
         ///<param name="arg5">날짜 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT90008(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT90008(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0778";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시간일자구분", arg2);
             SetInputValue("금액수량구분", arg3);
             SetInputValue("종목코드", arg4);
@@ -2790,15 +2738,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT90009 기능명:외국인기관매매상위요청</summary>
-        ///<param name="arg1">화면번호 : 0785</param>
         ///<param name="arg2">시장구분 : 000:전체, 001:코스피, 101:코스닥</param>
         ///<param name="arg3">금액수량구분 : 1:금액(천만), 2:수량(천)</param>
         ///<param name="arg4">조회일자구분 : 0:조회일자 미포함, 1:조회일자 포함</param>
         ///<param name="arg5">날짜 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT90009(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT90009(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0785";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시장구분", arg2);
             SetInputValue("금액수량구분", arg3);
             SetInputValue("조회일자구분", arg4);
@@ -2807,13 +2754,12 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT90010 기능명:차익잔고현황요청</summary>
-        ///<param name="arg1">화면번호 : 0774</param>
         ///<param name="arg2">일자 : YYYYMMDD (20170101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">금액수량구분 : 1:금액, 2:수량</param>
-        public void GetOPT90010(string arg1, string arg2, string arg3)
+        public void GetOPT90010(string arg2, string arg3)
         {
             string screenCode = "0774";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("일자", arg2);
             SetInputValue("금액수량구분", arg3);
             CommRqData("차익잔고현황요청", "OPT90010", 0, screenCode);
@@ -2830,28 +2776,26 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPT90012 기능명:대차거래내역요청</summary>
-        ///<param name="arg1">화면번호 : 1060</param>
         ///<param name="arg2">일자 : YYYYMMDD (20170101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">시장구분 : 001:코스피, 101:코스닥</param>
-        public void GetOPT90012(string arg1, string arg2, string arg3)
+        public void GetOPT90012(string arg2, string arg3)
         {
             string screenCode = "1060";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("일자", arg2);
             SetInputValue("시장구분", arg3);
             CommRqData("대차거래내역요청", "OPT90012", 0, screenCode);
         }
 
         ///<summary> 코드명:OPT90013 기능명:종목일별프로그램매매추이요청</summary>
-        ///<param name="arg1">화면번호 : 0778</param>
         ///<param name="arg2">시간일자구분 : 2:일자별</param>
         ///<param name="arg3">금액수량구분 : 1:금액, 2:수량</param>
         ///<param name="arg4">종목코드 : </param>
         ///<param name="arg5">날짜 : YYYYMMDD (20170101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPT90013(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPT90013(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0778";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("시간일자구분", arg2);
             SetInputValue("금액수량구분", arg3);
             SetInputValue("종목코드", arg4);
@@ -2875,7 +2819,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPTFOFID(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("선물전체시세요청", "OPTFOFID", 0, GetScrNum());
         }
 
@@ -2883,15 +2827,16 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPTKWFID(string arg1)
         {
-            SetInputValue("종목코드", arg1);
-            CommRqData("관심종목정보요청", "OPTKWFID", 0, GetScrNum());
+            //SetInputValue("종목코드", arg1);StockCode = arg1;
+            //CommRqData("관심종목정보요청", "OPTKWFID", 0, GetScrNum());
+            CommKwRqData(arg1, GetScrNum());
         }
 
         ///<summary> 코드명:OPTKWINV 기능명:관심종목투자자정보요청</summary>
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPTKWINV(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("관심종목투자자정보요청", "OPTKWINV", 0, GetScrNum());
         }
 
@@ -2899,20 +2844,19 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPTKWPRO(string arg1)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             CommRqData("관심종목프로그램정보요청", "OPTKWPRO", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPW00001 기능명:예수금상세현황요청</summary>
-        ///<param name="arg1">화면번호 : 0362</param>
         ///<param name="arg2">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg3">비밀번호 : 사용안함(공백)</param>
         ///<param name="arg4">비밀번호입력매체구분 : 00</param>
         ///<param name="arg5">조회구분 : 1:추정조회, 2:일반조회</param>
-        public void GetOPW00001(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPW00001(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0362";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("계좌번호", arg2);
             SetInputValue("비밀번호", arg3);
             SetInputValue("비밀번호입력매체구분", arg4);
@@ -2921,15 +2865,14 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPW00002 기능명:일별추정예탁자산현황요청</summary>
-        ///<param name="arg1">화면번호 : 0349</param>
         ///<param name="arg2">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg3">비밀번호 : 사용안함(공백)</param>
         ///<param name="arg4">시작조회기간 : YYYYMMDD (20170101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg5">종료조회기간 : YYYYMMDD (20170101 연도4자리, 월 2자리, 일 2자리 형식)</param>
-        public void GetOPW00002(string arg1, string arg2, string arg3, string arg4, string arg5)
+        public void GetOPW00002(string arg2, string arg3, string arg4, string arg5)
         {
             string screenCode = "0349";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("계좌번호", arg2);
             SetInputValue("비밀번호", arg3);
             SetInputValue("시작조회기간", arg4);
@@ -2988,7 +2931,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPW00007 기능명:계좌별주문체결내역상세요청</summary>
-        ///<param name="arg1">화면번호 : 0351</param>
         ///<param name="arg2">주문일자 : YYYYMMDD (20170101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg4">비밀번호 : 사용안함(공백)</param>
@@ -2998,10 +2940,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg8">매도수구분 : 0:전체, 1:매도, 2:매수</param>
         ///<param name="arg9">종목코드 : </param>
         ///<param name="arg10">시작주문번호 : </param>
-        public void GetOPW00007(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10)
+        public void GetOPW00007(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10)
         {
             string screenCode = "0351";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("주문일자", arg2);
             SetInputValue("계좌번호", arg3);
             SetInputValue("비밀번호", arg4);
@@ -3029,7 +2971,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPW00009 기능명:계좌별주문체결현황요청</summary>
-        ///<param name="arg1">화면번호 : 0343</param>
         ///<param name="arg2">주문일자 : YYYYMMDD (20170101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg4">비밀번호 : 사용안함(공백)</param>
@@ -3040,10 +2981,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg9">조회구분 : 0:전체, 1:체결</param>
         ///<param name="arg10">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg11">시작주문번호 : </param>
-        public void GetOPW00009(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10, string arg11)
+        public void GetOPW00009(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10, string arg11)
         {
             string screenCode = "0343";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("주문일자", arg2);
             SetInputValue("계좌번호", arg3);
             SetInputValue("비밀번호", arg4);
@@ -3058,7 +2999,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPW00010 기능명:주문인출가능금액요청</summary>
-        ///<param name="arg1">화면번호 : 0347</param>
         ///<param name="arg2">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg3">비밀번호 : 사용안함(공백)</param>
         ///<param name="arg4">비밀번호입력매체구분 : 00</param>
@@ -3068,10 +3008,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg8">매매수량 : </param>
         ///<param name="arg9">매수가격 : </param>
         ///<param name="arg10">예상매수단가 : </param>
-        public void GetOPW00010(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10)
+        public void GetOPW00010(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10)
         {
             string screenCode = "0347";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("계좌번호", arg2);
             SetInputValue("비밀번호", arg3);
             SetInputValue("비밀번호입력매체구분", arg4);
@@ -3085,16 +3025,15 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPW00011 기능명:증거금율별주문가능수량조회요청</summary>
-        ///<param name="arg1">화면번호 : 0347</param>
         ///<param name="arg2">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg3">비밀번호 : 사용안함(공백)</param>
         ///<param name="arg4">비밀번호입력매체구분 : 00</param>
         ///<param name="arg5">종목번호 : </param>
         ///<param name="arg6">매수가격 : </param>
-        public void GetOPW00011(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6)
+        public void GetOPW00011(string arg2, string arg3, string arg4, string arg5, string arg6)
         {
             string screenCode = "0347";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("계좌번호", arg2);
             SetInputValue("비밀번호", arg3);
             SetInputValue("비밀번호입력매체구분", arg4);
@@ -3142,7 +3081,6 @@ namespace KiwoomApi.Control.Api
         }
 
         ///<summary> 코드명:OPW00015 기능명:위탁종합거래내역요청</summary>
-        ///<param name="arg1">화면번호 : 0399</param>
         ///<param name="arg2">계좌번호 : 전문 조회할 보유계좌번호</param>
         ///<param name="arg3">비밀번호 : 사용안함(공백)</param>
         ///<param name="arg4">시작일자 : YYYYMMDD (20170101 연도4자리, 월 2자리, 일 2자리 형식)</param>
@@ -3153,10 +3091,10 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg9">상품구분 : 1, 0:전체, 1:국내주식, 2:수익증권, 3:해외주식, 4:금융상품</param>
         ///<param name="arg10">비밀번호입력매체구분 : 00</param>
         ///<param name="arg11">고객정보제한여부 : Y:제한,N:비제한</param>
-        public void GetOPW00015(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10, string arg11)
+        public void GetOPW00015(string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9, string arg10, string arg11)
         {
             string screenCode = "0399";
-            SetInputValue("화면번호", arg1);
+            SetInputValue("화면번호", screenCode);
             SetInputValue("계좌번호", arg2);
             SetInputValue("비밀번호", arg3);
             SetInputValue("시작일자", arg4);
@@ -3218,7 +3156,7 @@ namespace KiwoomApi.Control.Api
         ///<param name="arg3">연속키 : </param>
         public void GetOPW10001(string arg1, string arg2, string arg3)
         {
-            SetInputValue("종목코드", arg1);
+            SetInputValue("종목코드", arg1);StockCode = arg1;
             SetInputValue("연속구분", arg2);
             SetInputValue("연속키", arg3);
             CommRqData("ELW종목별민감도지표요청", "OPW10001", 0, GetScrNum());
@@ -3509,8 +3447,6 @@ namespace KiwoomApi.Control.Api
             SetInputValue("종목번호", arg1);
             CommRqData("신용융자 가능문의", "OPW20017", 0, GetScrNum());
         }
-
-
 
         #endregion
 

@@ -1,24 +1,18 @@
-﻿using System;
+﻿using KiwoomApi.Model.Def;
+using System;
 
 namespace KiwoomApi.Control.Api.SocketApi
 {
     class MessageParser
     {
-        private OpenApiController openApiController = null;
         private static readonly Logger<MessageParser> logger = new Logger<MessageParser>();
-        private static readonly char DEFAULT_SEPARATOR = '|';
-        private static readonly String PACKAGE_NAME = "KiwoomApi.Control.Api.SocketApi.Message";
-        public MessageParser()
+        private static readonly string PACKAGE_NAME = "KiwoomApi.Control.Api.SocketApi.Message";
+        public static string Parse(string message)
         {
-            openApiController = OpenApiController.Instance;
-        }
-        public string Parse(string message)
-        {
-
             logger.Debug(message);
             try
             {
-                string[] messageItem = message.Split(DEFAULT_SEPARATOR);
+                string[] messageItem = message.Split(Separator.FIELD);
                 string apiCode = messageItem[0];
                 string apiMessage = message.Substring(apiCode.Length + 1);
                 string resultMessage;

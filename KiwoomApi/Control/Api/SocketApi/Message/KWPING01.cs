@@ -1,19 +1,19 @@
-﻿using System;
+﻿using KiwoomApi.Control.Api.KiwoomApi;
+using KiwoomApi.Model.Def;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using KiwoomApi.Control.Api.SocketApi;
-
 
 namespace KiwoomApi.Control.Api.SocketApi.Message
 {
-    class SELL0001 : DefaultSocketMessage , ISocketMessage
+    class KWPING01 : ISocketMessage
     {
         public string Receive(string message)
         {
             
-            return "";
+            return KiwoomApiCaller.CallTR("KWPONG01", "PONG!");
         }
     }
 }

@@ -1,6 +1,9 @@
-﻿using KiwoomApi.Control.Config;
+﻿using KiwoomApi.Control.Api.SocketApi;
+using KiwoomApi.Control.Config;
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -8,79 +11,116 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace KiwoomApi.Control
+namespace KiwoomApi.Control.Socket
 {
     class ApiSocketClient
     {
         private static readonly Logger<ApiSocketClient> logger = new Logger<ApiSocketClient>();
 
+        private static int serverRcvPort = 33333;
+        private static int serverSndPort = 33334;
+        private static string serverIP = "127.0.0.1";
+
+        /* Singleton */
+        private static readonly Lazy<ApiSocketClient> lazy = new Lazy<ApiSocketClient>(() => new ApiSocketClient());
+        public static ApiSocketClient Instance => lazy.Value;
+
+        private string apiId = string.Empty;
+        private string serverApiPackage = string.Empty;
+        private ApiSocketClient() {
+            
+            serverIP = ConfigManager.MasterServerIP;
+            
+            serverRcvPort = ConfigManager.MasterServerRcvPort;
+            serverSndPort = ConfigManager.MasterServerSndPort;
+            rcvClient = new TcpClient(serverIP, serverRcvPort);
+            sndClient = new TcpClient(serverIP, serverSndPort);
+
+            apiId = ConfigManager.KiwoomApiID;
+            serverApiPackage = ConfigManager.KiwoomApiPackage;
+
+        }
+        /* Singleton */
+
         private static readonly char START = (char)0;
         private static readonly char END   = (char)1;
 
+        private static TcpClient rcvClient = null;
+        private static TcpClient sndClient = null;
 
-        public void StartClient()
+        public void ReceiveThreadStart()
         {
-            Thread socketServerThread = new Thread(ConnectServer);
-            socketServerThread.Start();
+            Thread receiveThread = new Thread(ReceiveMessage);
+            receiveThread.Start();
+        }
+        
+        private void ReceiveMessage()
+        {
+            NetworkStream ns = rcvClient.GetStream();
+            byte[] receivedBytes = new byte[1024];
+            int byte_count;
+
+            while ((byte_count = ns.Read(receivedBytes,0, receivedBytes.Length-1)) > 0)
+            {
+                string message = GetApiReceiveStr(receivedBytes);
+                MessageParser.Parse(message);
+            }
         }
 
-        public static void ConnectServer()
+        Boolean isConnected = false;
+        public void ConnectServer()
         {
-            int PORT = ConfigManager.MasterServerPort;
-            string IP = ConfigManager.MasterServerIP;
+            if (isConnected == false)
+            {
+                logger.Info(String.Format("server connected. {0}:{1},{2}", serverIP, serverSndPort,serverRcvPort));
+                SendMessage("KWCONN01", apiId);
+                ReceiveThreadStart();
+                isConnected = true;
+            }
+        }
 
-            NetworkStream NS = null;
-            StreamReader SR = null;
-            StreamWriter SW = null;
-            TcpClient client = null;
-
+        public void SendMessage(String apiCode, string message)
+        {
             try
             {
-                client = new TcpClient(IP, PORT); //client 연결
-
-                logger.Info(String.Format( "server connected. {0}:{1}", IP, PORT ));
-                NS = client.GetStream(); // 소켓에서 메시지를 가져오는 스트림
-                SR = new StreamReader(NS, Encoding.UTF8); // Get message
-                SW = new StreamWriter(NS, Encoding.UTF8); // Send message
-
+                NetworkStream ns = sndClient.GetStream(); // 소켓에서 메시지를 가져오는 스트림
+                StreamWriter sw = new StreamWriter(ns, Encoding.UTF8); // Send message
                 string sendMessage = string.Empty;
-                string GetMessage = string.Empty;
-
-                string apiId = ConfigManager.KiwoomApiID;
-
-                sendMessage = "DCONN0001," + apiId;
+                if (serverApiPackage == null)
+                {
+                    sendMessage = "D" + apiCode + "," + message;
+                }
+                else
+                {
+                    sendMessage = "C" + serverApiPackage + "," + apiCode + "," + message;
+                }
 
                 char[] buff = GetApiChars(sendMessage);
-                SW.Write(buff);// 메시지 보내기
-                SW.Flush();
-
-                //while (true)
-                //{
-
-                //   Thread.Sleep(1000);
-                //}
-
-                //SW.Close();
-
-                //while ((SendMessage = Console.ReadLine()) != null)
-                //{
-                //SW.WriteLine(SendMessage); // 메시지 보내기
-                //SW.Flush();
-
-                //                GetMessage = SR.ReadLine();
-                //logger.Info(GetMessage);
-                //}
+                sw.Write(buff);// 메시지 보내기
+                sw.Flush();
             }
 
             catch (Exception e)
             {
                 logger.Err(e.Message);
             }
-            finally
+        }
+
+        public void SendMessage(string message)
+        {
+            try
             {
-                if (SW != null) SW.Close();
-                if (SR != null) SR.Close();
-                if (client != null) client.Close();
+                NetworkStream ns = rcvClient.GetStream(); // 소켓에서 메시지를 가져오는 스트림
+                StreamWriter sw = new StreamWriter(ns, Encoding.UTF8); // Send message
+                string sendMessage = message;
+                char[] buff = GetApiChars(sendMessage);
+                sw.Write(buff);// 메시지 보내기
+                sw.Flush();
+            }
+
+            catch (Exception e)
+            {
+                logger.Err(e.Message);
             }
         }
 
@@ -93,6 +133,40 @@ namespace KiwoomApi.Control
             messageChars.CopyTo(buff, 1);
             buff[buff.Length - 1] = END;
             return buff;
+        }
+
+        public static string GetApiReceiveStr(byte[] messageBytes)
+        {
+            
+            int copyCnt = 0;
+            for (int i = 0; i < messageBytes.Length; i++)
+            {
+                char checkChar = (char)messageBytes[i];
+                if (checkChar == START)
+                {
+                    continue;
+                }
+                else if (checkChar == END)
+                {
+                    break;
+                }
+                copyCnt++;
+            }
+            byte[] buff = new byte[copyCnt];
+            copyCnt = 0;
+            for (int i=0; i < messageBytes.Length; i++)
+            {
+                char checkChar = (char)messageBytes[i];
+                if (checkChar == START)
+                {
+                    continue;
+                } else if(checkChar == END)
+                {
+                    break;
+                }
+                buff[copyCnt++] = messageBytes[i];
+            }
+            return Encoding.UTF8.GetString(buff).Substring(1);
         }
     }
 }

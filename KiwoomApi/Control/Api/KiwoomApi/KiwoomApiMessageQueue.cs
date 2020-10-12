@@ -18,7 +18,6 @@ namespace KiwoomApi.Control.Api.Open
         private ManualResetEvent Controller = new ManualResetEvent(false);
         private Thread QueueThread = null; 
         private Object QueueLockObj = new object();
-        private MessageParser messageParser = new MessageParser();
         public bool IsAlive { get; private set; }
 
         public OpenApiMessageQueue() { 
@@ -53,7 +52,7 @@ namespace KiwoomApi.Control.Api.Open
                         lock (QueueLockObj)
                         {
                             string message = this.messageList.Dequeue();
-                            messageParser.Parse(message);
+                            MessageParser.Parse(message);
                         }
                     } 
                     // 다 수행하고 나면, 대기상태로 진입 

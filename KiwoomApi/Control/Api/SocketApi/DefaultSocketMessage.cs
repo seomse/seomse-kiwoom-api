@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KiwoomApi.Control.Api.KiwoomApi;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,7 @@ namespace KiwoomApi.Control.Api.SocketApi
 {
     abstract class DefaultSocketMessage 
     {
-        protected OpenApiController openApi = OpenApiController.Instance;
+        protected KiwoomApiController openApi = KiwoomApiController.Instance;
         protected Boolean IsReady { get { return openApi.IsReady; } }
     }
 }

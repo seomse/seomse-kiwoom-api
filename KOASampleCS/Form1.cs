@@ -67,7 +67,7 @@ namespace KOASampleCS
         // 로그를 출력합니다.
         public void Logger(Log type, string format, params Object[] args)
         {
-            string message = String.Format(format, args);
+            string message = string.Format(format, args);
 
             switch (type)
             {
