@@ -1,0 +1,6 @@
+# all of visual studio file
+.vs/
+
+# build file
+bin/
+obj/
