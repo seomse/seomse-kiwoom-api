@@ -111,6 +111,7 @@
     <Compile Include="Control\Api\SocketApi\MessageParser.cs" />
     <Compile Include="Control\Api\SocketApi\ISocketMessage.cs" />
     <Compile Include="Control\Api\SocketApi\Message\KWPING01.cs" />
+    <Compile Include="Control\Api\SocketApi\Message\KWTRD001.cs" />
     <Compile Include="Control\Api\SocketApi\Message\KWTR0001.cs" />
     <Compile Include="Model\Def\Separator.cs" />
     <Compile Include="View\KiwoomApiForm.cs">

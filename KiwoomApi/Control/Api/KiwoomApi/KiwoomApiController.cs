@@ -3443,7 +3443,6 @@ namespace KiwoomApi.Control.Api.KiwoomApi
 
         ///<summary> 코드명:ORD10001 기능명:거래주문</summary>
         ///<param name="arg1">사용자구분 : 주식주문</param>
-        ///<param name="arg2">화면번호 : 9999</param>
         ///<param name="arg3">계좌번호 : 계좌번호10자리</param>
         ///<param name="arg4">주문유형 : 1:신규매수, 2:신규매도 3:매수취소, 4:매도취소, 5:매수정정, 6:매도정정</param>
         ///<param name="arg5">종목코드 : 종목코드</param>
@@ -3451,7 +3450,7 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         ///<param name="arg7">주문가격 : 주문가격</param>
         ///<param name="arg8">호가구분 : 00:지정가,03:시장가,05:조건부지정가,06:최유리지정가,07:최우선지정가,10:지정가IOC,13:시장가IOC,16:최유리IOC,20:지정가FOK,23:시장가FOK,26:최유리FOK,61:장전시간외종가,62:시간외단일가매매,81:장후시간외종가</param>
         ///<param name="arg9">원주문번호 : 신규주문에는 공백, 정정(취소)주문할 원주문번호를 입력합니다.</param>
-        public string GetORD10001(string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9)
+        public string GetORD10001(string arg1, string arg3, string arg4, string arg5, string arg6, string arg7, string arg8, string arg9)
         {
             string screenCode = "9999";
             return AxKHOpenAPI.SendOrder(arg1, screenCode, arg3, Int32.Parse(arg4), arg5, Int32.Parse(arg6), Int32.Parse(arg7), arg8, arg9) + "";

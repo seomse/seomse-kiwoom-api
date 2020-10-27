@@ -27,15 +27,30 @@ namespace KiwoomApi.Control.Socket
 
         private string apiId = string.Empty;
         private string serverApiPackage = string.Empty;
+        private int CONNECT_WAIT_TIME = 3000;
         private ApiSocketClient() {
             
             serverIP = ConfigManager.MasterServerIP;
             
             serverRcvPort = ConfigManager.MasterServerRcvPort;
             serverSndPort = ConfigManager.MasterServerSndPort;
-            rcvClient = new TcpClient(serverIP, serverRcvPort);
-            sndClient = new TcpClient(serverIP, serverSndPort);
-
+            while (true)
+            {
+                try
+                {
+                    rcvClient = new TcpClient(serverIP, serverRcvPort);
+                    sndClient = new TcpClient(serverIP, serverSndPort);
+                    break;
+                } catch
+                {
+                    Thread.Sleep(CONNECT_WAIT_TIME);
+                    logger.Err("SERVER ([RCV]" + serverIP + ":" + serverRcvPort +",[SND]"+ serverIP + ":" + serverSndPort
+                        + ") CONNECT FAIL. WAIT [" +(CONNECT_WAIT_TIME / 1000 )+"] SECONDS..");
+                    rcvClient = null;
+                    sndClient = null;
+                    continue;
+                }
+            }
             apiId = ConfigManager.KiwoomApiID;
             serverApiPackage = ConfigManager.KiwoomApiPackage;
 
@@ -68,7 +83,7 @@ namespace KiwoomApi.Control.Socket
         }
 
         Boolean isConnected = false;
-        public void ConnectServer()
+        public Boolean ConnectServer()
         {
             if (isConnected == false)
             {
@@ -77,6 +92,7 @@ namespace KiwoomApi.Control.Socket
                 ReceiveThreadStart();
                 isConnected = true;
             }
+            return isConnected;
         }
 
         public void SendMessage(String apiCode, string message)
