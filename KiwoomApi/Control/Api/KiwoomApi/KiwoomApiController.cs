@@ -13,7 +13,6 @@ namespace KiwoomApi.Control.Api.KiwoomApi
     class KiwoomApiController
     {
         Logger<KiwoomApiController> logger = new Logger<KiwoomApiController>();
-        IDictionary<String, OpenApiCallBack> callbackDic = new ConcurrentDictionary<String, OpenApiCallBack>();
         public AxKHOpenAPILib.AxKHOpenAPI AxKHOpenAPI { get; set; }
 
         public Boolean IsReady { get; set; }
@@ -129,44 +128,6 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             GetLGI10001();
         }
         
-        public void SetCallBack(String clientId)
-        {
-            if (callbackDic.Keys.Contains(clientId))
-            {
-                logger.Err("clientId : " + clientId + " is already in.");
-                return;
-            }
-            OpenApiCallBack callback = new OpenApiCallBack();
-            /*
-            onReceiveChejanData += callback.AxKHOpenAPI_OnReceiveChejanData;
-            onReceiveConditionVer += callback.AxKHOpenAPI_OnReceiveConditionVer;
-            onReceiveInvestRealData += callback.AxKHOpenAPI_OnReceiveInvestRealData;
-            onReceiveMsg += callback.AxKHOpenAPI_OnReceiveMsg;
-            onReceiveRealCondition += callback.AxKHOpenAPI_OnReceiveRealCondition;
-            onReceiveRealData += callback.AxKHOpenAPI_OnReceiveRealData;
-            onReceiveTrCondition += callback.AxKHOpenAPI_OnReceiveTrCondition;
-            onReceiveTrData += callback.AxKHOpenAPI_OnReceiveTrData;
-
-            callbackDic.Add(clientId, callback);
-            */
-        }
-        public void removeCallBack(String clientId)
-        {
-            OpenApiCallBack callback = callbackDic[clientId];
-
-            onReceiveChejanData -= callback.AxKHOpenAPI_OnReceiveChejanData;
-            onReceiveConditionVer -= callback.AxKHOpenAPI_OnReceiveConditionVer;
-            onReceiveInvestRealData -= callback.AxKHOpenAPI_OnReceiveInvestRealData;
-            onReceiveMsg -= callback.AxKHOpenAPI_OnReceiveMsg;
-            onReceiveRealCondition -= callback.AxKHOpenAPI_OnReceiveRealCondition;
-            onReceiveRealData -= callback.AxKHOpenAPI_OnReceiveRealData;
-            onReceiveTrCondition -= callback.AxKHOpenAPI_OnReceiveTrCondition;
-            onReceiveTrData -= callback.AxKHOpenAPI_OnReceiveTrData;
-
-            callback = null;
-
-            callbackDic.Remove(clientId);
-        }
         #endregion
 
         #region CallBack Events
