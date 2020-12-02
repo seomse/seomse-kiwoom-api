@@ -85,12 +85,24 @@ namespace KiwoomApi.Control.Socket
         Boolean isConnected = false;
         public Boolean ConnectServer()
         {
-            if (isConnected == false)
+            while (true)
             {
-                logger.Info(String.Format("server connected. {0}:{1},{2}", serverIP, serverSndPort,serverRcvPort));
-                SendMessage("KWCONN01", apiId);
-                ReceiveThreadStart();
-                isConnected = true;
+                if (isConnected == false)
+                {
+                    try
+                    {
+                        logger.Info(String.Format("server connected. {0}:{1},{2}", serverIP, serverSndPort, serverRcvPort));
+                        SendMessage("KWCONN01", apiId);
+                    } catch(Exception e)
+                    {
+                        logger.Err(e.StackTrace);
+                        Thread.Sleep(1000);
+                        continue;
+                    }
+                    ReceiveThreadStart();                    
+                    isConnected = true;
+                    break;
+                }
             }
             return isConnected;
         }

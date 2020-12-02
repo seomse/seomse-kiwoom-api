@@ -52,7 +52,7 @@ namespace KiwoomApi.Control.Socket
         {
             TcpClient client = Listener.AcceptTcpClient();
             ApiSocketReciever r = new ApiSocketReciever();
-            r.startClient(client);
+            r.StartClient(client);
         }
 
     }

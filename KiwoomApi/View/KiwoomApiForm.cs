@@ -32,7 +32,6 @@ namespace KiwoomApi.View
 
             api = KiwoomApiController.Instance;
             api.AxKHOpenAPI = this.axKHOpenAPI;
-            api.Init();
         }
 
         #endregion

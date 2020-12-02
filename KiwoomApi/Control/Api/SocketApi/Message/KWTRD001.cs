@@ -10,9 +10,13 @@ namespace KiwoomApi.Control.Api.SocketApi.Message
 {
     class KWTRD001 : ISocketMessage
     {
+        private Logger<KWTRD001> logger = new Logger<KWTRD001>();
         public string Receive(string message)
         {
-            return KiwoomApiCaller.Order(message);
+            logger.Info(message);
+            String callbackID = message.Split(Separator.FIELD)[0];
+            String orderMessage = message.Split(Separator.FIELD)[1];
+            return KiwoomApiCaller.Order(callbackID, orderMessage);
         }
     }
 }

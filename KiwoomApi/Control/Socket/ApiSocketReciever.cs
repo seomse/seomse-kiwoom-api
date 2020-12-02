@@ -16,7 +16,7 @@ namespace KiwoomApi.Control.Socket
         private NetworkStream NS = null;
         private StreamReader SR = null;
         private StreamWriter SW = null;
-        public void startClient(TcpClient clientSocket)
+        public void StartClient(TcpClient clientSocket)
         {
             NS = clientSocket.GetStream(); 
             SR = new StreamReader(NS, Encoding.UTF8); 
@@ -45,8 +45,6 @@ namespace KiwoomApi.Control.Socket
                 clientSocket.Close();
                 NS.Close();
             }
-
-        
         }
     }
 }
