@@ -1,10 +1,10 @@
-# seomse-stock-crawling
+# seomse-kiwoom-api
 
 # 개발환경
-- open jdk 1.8
+- .netframework 4.7.2
 
 # 개요
-주식 정보 크롤링
+섬세 키움 API C# 버전 (자바 통신용)
 
 # communication
 ### blog, homepage
