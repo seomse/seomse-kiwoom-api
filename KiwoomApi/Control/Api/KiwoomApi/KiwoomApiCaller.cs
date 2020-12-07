@@ -7,34 +7,30 @@ using System.Threading.Tasks;
 
 namespace KiwoomApi.Control.Api.KiwoomApi
 {
-    class KiwoomApiCaller
+    static class KiwoomApiCaller
     {
         private static readonly string SUCCESS = "SUCCESS";
         private static readonly string FAIL = "FAIL";
 
-        private static KiwoomApiController api = KiwoomApiController.Instance;
+        private static readonly KiwoomApiController api = KiwoomApiController.Instance;
 
 
-        ///<summary> 코드명:ORD10001 기능명:거래주문</summary>
-        ///<param name="arg1">계좌번호 : 계좌번호10자리</param>
-        ///<param name="arg2">주문유형 : 1:신규매수, 2:신규매도 3:매수취소, 4:매도취소, 5:매수정정, 6:매도정정</param>
-        ///<param name="arg3">종목코드 : 종목코드</param>
-        ///<param name="arg4">주문수량 : 주문수량</param>
-        ///<param name="arg5">주문가격 : 주문가격</param>
-        ///<param name="arg6">호가구분 : 00:지정가,03:시장가,05:조건부지정가,06:최유리지정가,07:최우선지정가,10:지정가IOC,13:시장가IOC,16:최유리IOC,20:지정가FOK,23:시장가FOK,26:최유리FOK,61:장전시간외종가,62:시간외단일가매매,81:장후시간외종가</param>
-        ///<param name="arg7">원주문번호 : 신규주문에는 공백, 정정(취소)주문할 원주문번호를 입력합니다.</param>
+        /**
+         * 
+         */
         public static string Order(string callbackID , string orderMessage)
         {
+            ///<param name="arg1">계좌번호 : 계좌번호10자리</param>
+            ///<param name="arg2">주문유형 : 1:신규매수, 2:신규매도 3:매수취소, 4:매도취소, 5:매수정정, 6:매도정정</param>
+            ///<param name="arg3">종목코드 : 종목코드</param>
+            ///<param name="arg4">주문수량 : 주문수량</param>
+            ///<param name="arg5">주문가격 : 주문가격</param>
+            ///<param name="arg6">호가구분 : 00:지정가,03:시장가,05:조건부지정가,06:최유리지정가,07:최우선지정가,10:지정가IOC,13:시장가IOC,16:최유리IOC,20:지정가FOK,23:시장가FOK,26:최유리FOK,61:장전시간외종가,62:시간외단일가매매,81:장후시간외종가</param>
+            ///<param name="arg7">원주문번호 : 신규주문에는 공백, 정정(취소)주문할 원주문번호를 입력합니다.</param>
             Console.WriteLine("Order:" + orderMessage);
             string[] paramArr = Separator.ParseData(orderMessage);
-            string result = api.GetORD10001(callbackID,paramArr[0], paramArr[1], paramArr[2], paramArr[3], paramArr[4], paramArr[5], paramArr[6]);
-            if (result.Equals("0"))
-            {
-                return SUCCESS;
-            } else
-            {
-                return FAIL;
-            }
+            api.GetORD10001(callbackID,paramArr[0], paramArr[1], paramArr[2], paramArr[3], paramArr[4], paramArr[5], paramArr[6]);
+            return SUCCESS;
         }
 
 
@@ -133,7 +129,9 @@ namespace KiwoomApi.Control.Api.KiwoomApi
                     //OPT10044 기능명:일별기관매매종목요청
                     case "OPT10044":  api.GetOPT10044(callbackID,paramArr[0], paramArr[1], paramArr[2], paramArr[3]); break;
                     //OPT10045 기능명:종목별기관매매추이요청
-                    case "OPT10045":  api.GetOPT10045(callbackID,paramArr[0], paramArr[1], paramArr[2], paramArr[3], paramArr[4], paramArr[5], paramArr[6]); break;
+                    case "OPT10045": api.GetOPT10045(callbackID, paramArr[0], paramArr[1], paramArr[2], paramArr[3], paramArr[4], paramArr[5], paramArr[6]); break;
+                    //OPT10047 기능명:체결강도추이일별요청
+                    case "OPT10047": api.GetOPT10047(callbackID, paramArr[0], paramArr[1]); break;
                     //OPT10048 기능명:ELW일별민감도지표요청
                     case "OPT10048":  api.GetOPT10048(callbackID,paramArr[0]); break;
                     //OPT10049 기능명:ELW투자지표요청

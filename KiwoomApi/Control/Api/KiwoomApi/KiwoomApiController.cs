@@ -17,41 +17,11 @@ namespace KiwoomApi.Control.Api.KiwoomApi
 
         public Boolean IsReady { get; set; }
         private int _scrNum = 1;
-        private string _strRealConScrNum = "0000";
-        private string _strRealConName = "0000";
-        private int _nIndex = 0;
-
-        private bool _bRealTrade = false;
 
         private readonly string PARAM_SEPARATOR = ",";
         private readonly string DATA_SEPARATOR = "|";
 
         private string nowCallbackID;
-
-
-        #region Observers
-        private delegate void CallBackOnReceiveChejanData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveChejanDataEvent e);
-        private delegate void CallBackOnReceiveConditionVer(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveConditionVerEvent e);
-        private delegate void CallBackOnReceiveInvestRealData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveInvestRealDataEvent e);
-        private delegate void CallBackOnReceiveMsg(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveMsgEvent e);
-        private delegate void CallBackOnReceiveRealCondition(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveRealConditionEvent e);
-        private delegate void CallBackOnReceiveRealData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveRealDataEvent e);
-        private delegate void CallBackOnReceiveTrCondition(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrConditionEvent e);
-        private delegate void CallBackOnReceiveTrData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrDataEvent e);
-
-
-        private CallBackOnReceiveChejanData onReceiveChejanData;
-        private CallBackOnReceiveConditionVer onReceiveConditionVer;
-        private CallBackOnReceiveInvestRealData onReceiveInvestRealData;
-        private CallBackOnReceiveMsg onReceiveMsg;
-        private CallBackOnReceiveRealCondition onReceiveRealCondition;
-        private CallBackOnReceiveRealData onReceiveRealData;
-        private CallBackOnReceiveTrCondition onReceiveTrCondition;
-        private CallBackOnReceiveTrData onReceiveTrData;
-
-
-
-        #endregion
 
         #region SingleTon
         private class Holder { internal static readonly KiwoomApiController INSTANCE = new KiwoomApiController(); }
@@ -178,13 +148,17 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         {
             //onReceiveTrCondition(sender, e);
         }
-
+        /// <summary>
+        /// TR 콜백 이벤트
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void axKHOpenAPI_OnReceiveTrData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrDataEvent e)
         {
             StringBuilder apiMessage = new StringBuilder();
 
             object result = AxKHOpenAPI.GetCommDataEx(e.sTrCode, e.sRQName);
-
+            logger.Debug("e.sRQName:"+ e.sRQName+ " , e.sRQName:"+ e.sRQName + ", sPrevNext:" + e.sPrevNext);
             string code = getTRCode(e.sRQName);
 
             if (result == null)
@@ -209,7 +183,8 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             {
                 resultArrMulti = (object[,])result;
                 apiMessage.Append(code).Append(PARAM_SEPARATOR)
-                    .Append(nowCallbackID).Append(PARAM_SEPARATOR);
+                    .Append(nowCallbackID).Append(PARAM_SEPARATOR)
+                    .Append(e.sPrevNext).Append(PARAM_SEPARATOR);
                 for (int i = 0; i < resultArrMulti.GetLength(0); i++)
                 {
                     for (int j = 0; j < resultArrMulti.GetLength(1); j++)
@@ -228,7 +203,8 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             {
                 resultArr = (object[])result;
                 apiMessage.Append(code).Append(PARAM_SEPARATOR)
-                    .Append(nowCallbackID).Append(PARAM_SEPARATOR);
+                    .Append(nowCallbackID).Append(PARAM_SEPARATOR)
+                    .Append(e.sPrevNext).Append(PARAM_SEPARATOR);
                 for (int i = 0; i < resultArr.GetLength(0); i++)
                 {
                     apiMessage.Append(resultArr[i]).Append(DATA_SEPARATOR);
@@ -240,7 +216,6 @@ namespace KiwoomApi.Control.Api.KiwoomApi
                 apiMessage.Append(result);
             }
 
-            //logger.Info(apiMessage.ToString());
             ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString()); 
         }
 
@@ -291,6 +266,7 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             else if (sRQName == "거래원매물대분석요청") code = "OPT10043";
             else if (sRQName == "일별기관매매종목요청") code = "OPT10044";
             else if (sRQName == "종목별기관매매추이요청") code = "OPT10045";
+            else if (sRQName == "체결강도추이일별요청") code = "OPT10047";
             else if (sRQName == "ELW일별민감도지표요청") code = "OPT10048";
             else if (sRQName == "ELW투자지표요청") code = "OPT10049";
             else if (sRQName == "ELW민감도지표요청") code = "OPT10050";
@@ -475,6 +451,7 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         }
 
         #endregion
+        
         #region TR Functions
         ///<summary> 코드명:OPT10001 기능명:주식기본정보요청</summary>
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
@@ -1191,6 +1168,19 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             CommRqData("종목별기관매매추이요청", "OPT10045", 0, screenCode);
         }
 
+        ///<summary> 코드명:OPT10047 기능명:체결강도추이일별요청</summary>
+        ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
+        ///<param name="arg3">연속조회 번호 : 0:시작, 2~n 연속조회 </param>
+        public void GetOPT10047(string callbackID, string arg2 , string arg3)
+        {
+            nowCallbackID = callbackID;
+            string screenCode = "5000";
+            SetInputValue("종목코드", arg2);
+            SetInputValue("틱구분", "1");
+            SetInputValue("체결강도부분", "1");
+            CommRqData("체결강도추이일별요청", "opt10047", Int32.Parse(arg3), screenCode);
+        }
+
         ///<summary> 코드명:OPT10048 기능명:ELW일별민감도지표요청</summary>
         ///<param name="arg2">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10048(string callbackID, string arg2)
@@ -1753,7 +1743,7 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             SetInputValue("종목코드", arg1); 
             SetInputValue("조회일자", arg2);
             SetInputValue("표시구분", arg3);
-            CommRqData("일별주가요청", "OPT10086", 0, GetScrNum());
+            CommRqData("일별주가요청", "OPT10086", 0, "0101");
         }
 
         ///<summary> 코드명:OPT10087 기능명:시간외단일가요청</summary>
