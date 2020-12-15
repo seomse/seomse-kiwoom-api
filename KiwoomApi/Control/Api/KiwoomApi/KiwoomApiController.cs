@@ -20,6 +20,7 @@ namespace KiwoomApi.Control.Api.KiwoomApi
 
         private readonly string PARAM_SEPARATOR = ",";
         private readonly string DATA_SEPARATOR = "|";
+        private readonly string DATA_MULTI_SEPARATOR = "^";
 
         private string nowCallbackID;
 
@@ -148,6 +149,44 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         {
             //onReceiveTrCondition(sender, e);
         }
+
+
+        private void processTrData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrDataEvent e)
+        {
+            StringBuilder apiMessage = new StringBuilder();
+            logger.Debug("processTrData e.sRQName:" + e.sRQName + " , e.sRQName:" + e.sRQName + ", sPrevNext:" + e.sPrevNext);
+            string code = getTRCode(e.sRQName);
+            apiMessage.Append(code).Append(PARAM_SEPARATOR)
+                .Append(nowCallbackID).Append(PARAM_SEPARATOR)
+                .Append(e.sPrevNext).Append(PARAM_SEPARATOR);
+            if (e.sRQName == "계좌평가현황요청")
+            {
+                string readyPrice = AxKHOpenAPI.GetCommData(e.sTrCode, e.sRQName, 0, "예수금");
+                string totalPrice = AxKHOpenAPI.GetCommData(e.sTrCode, e.sRQName, 0, "총매입금액");
+                apiMessage.Append(Int64.Parse(readyPrice)).Append(DATA_SEPARATOR)
+                    .Append(Int64.Parse(totalPrice)).Append(DATA_MULTI_SEPARATOR);
+                int nCnt = AxKHOpenAPI.GetRepeatCnt(e.sTrCode, e.sRQName);
+                for (int i = 0; i < nCnt; i++)
+                {
+                    apiMessage
+                        .Append(AxKHOpenAPI.GetCommData(e.sTrCode, e.sRQName, i, "종목코드").Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetCommData(e.sTrCode, e.sRQName, i, "종목명").Trim()).Append(DATA_SEPARATOR)
+                        .Append(Int64.Parse(AxKHOpenAPI.GetCommData(e.sTrCode, e.sRQName, i, "보유수량"))).Append(DATA_SEPARATOR)
+                        .Append(Int64.Parse(AxKHOpenAPI.GetCommData(e.sTrCode, e.sRQName, i, "평균단가"))).Append(DATA_SEPARATOR)
+                        .Append(Int64.Parse(AxKHOpenAPI.GetCommData(e.sTrCode, e.sRQName, i, "현재가"))).Append(DATA_SEPARATOR)
+                        .Append(Int64.Parse(AxKHOpenAPI.GetCommData(e.sTrCode, e.sRQName, i, "평가금액"))).Append(DATA_SEPARATOR)
+                        .Append(Int64.Parse(AxKHOpenAPI.GetCommData(e.sTrCode, e.sRQName, i, "손익금액"))).Append("\n");
+                }
+                logger.Debug(apiMessage.ToString());
+                ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString());
+            }
+            else
+            {
+                apiMessage.Append("FAIL");
+                ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString());
+            }
+        }
+
         /// <summary>
         /// TR 콜백 이벤트
         /// </summary>
@@ -156,21 +195,14 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         private void axKHOpenAPI_OnReceiveTrData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrDataEvent e)
         {
             StringBuilder apiMessage = new StringBuilder();
-
-            object result = AxKHOpenAPI.GetCommDataEx(e.sTrCode, e.sRQName);
-            logger.Debug("e.sRQName:"+ e.sRQName+ " , e.sRQName:"+ e.sRQName + ", sPrevNext:" + e.sPrevNext);
             string code = getTRCode(e.sRQName);
-
-            if (result == null)
+            if (e.sRQName == "계좌평가현황요청")
             {
-                logger.Err(" Data is null!");
-
-                apiMessage.Append(code).Append(PARAM_SEPARATOR)
-                    .Append(nowCallbackID).Append(PARAM_SEPARATOR).Append("FAIL");
-
-                ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString());
+                processTrData(sender, e);
                 return;
             }
+            logger.Debug("e.sRQName:"+ e.sRQName+ " , e.sRQName:"+ e.sRQName + ", sPrevNext:" + e.sPrevNext);
+            object result = AxKHOpenAPI.GetCommDataEx(e.sTrCode, e.sRQName);
 
             Type valueType = result.GetType();
             object[,] resultArrMulti;
@@ -407,7 +439,7 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             else if (sRQName == "관심종목정보요청") code = "OPTKWFID";
             else if (sRQName == "관심종목투자자정보요청") code = "OPTKWINV";
             else if (sRQName == "관심종목프로그램정보요청") code = "OPTKWPRO";
-            else if (sRQName == "예수금상세현황요청") code = "OPW00001";
+            else if (sRQName == "예수금상세현황요청") code = "opw00001";
             else if (sRQName == "일별추정예탁자산현황요청") code = "OPW00002";
             else if (sRQName == "추정자산조회요청") code = "OPW00003";
             else if (sRQName == "계좌평가현황요청") code = "OPW00004";
@@ -3010,13 +3042,16 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         public void GetOPW00001(string callbackID, string arg2, string arg3, string arg4, string arg5)
         {
             nowCallbackID = callbackID;
-            string screenCode = "0362";
+            
+            logger.Debug("account:"+arg2+",pass:"+arg3+",gu:"+arg4+",jo:"+arg5);
+            
+            string screenCode = "0102";
             SetInputValue("화면번호", screenCode);
             SetInputValue("계좌번호", arg2);
             SetInputValue("비밀번호", arg3);
             SetInputValue("비밀번호입력매체구분", arg4);
             SetInputValue("조회구분", arg5);
-            CommRqData("예수금상세현황요청", "OPW00001", 0, screenCode);
+            CommRqData("예수금상세현황요청", "opw00001", 0, screenCode);
         }
 
         ///<summary> 코드명:OPW00002 기능명:일별추정예탁자산현황요청</summary>
@@ -3057,11 +3092,15 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         public void GetOPW00004(string callbackID, string arg1, string arg2, string arg3, string arg4)
         {
             nowCallbackID = callbackID;
+            string screenCode = "4000";
+            
+            logger.Debug("GetOPW00004:"+arg1+",pass:"+arg2+",gu:"+arg3+",me:"+arg4);
+            
             SetInputValue("계좌번호", arg1);
             SetInputValue("비밀번호", arg2);
             SetInputValue("상장폐지조회구분", arg3);
             SetInputValue("비밀번호입력매체구분", arg4);
-            CommRqData("계좌평가현황요청", "OPW00004", 0, GetScrNum());
+            CommRqData("계좌평가현황요청", "OPW00004", 0, screenCode);
         }
 
         ///<summary> 코드명:OPW00005 기능명:체결잔고요청</summary>
