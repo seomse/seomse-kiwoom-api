@@ -117,7 +117,34 @@ namespace KiwoomApi.Control.Api.KiwoomApi
 
         private void axKHOpenAPI_OnReceiveChejanData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveChejanDataEvent e)
         {
-            //onReceiveChejanData(sender, e);
+            StringBuilder apiMessage = new StringBuilder();
+            logger.Debug("onReceiveChejanData e.sGubun:" + e.sGubun);
+            apiMessage.Append("ORD10001").Append(PARAM_SEPARATOR)
+                .Append(nowCallbackID).Append(PARAM_SEPARATOR)
+                .Append("0").Append(PARAM_SEPARATOR);
+            if (e.sGubun == "0") // sGubun – 0:주문체결통보, 1:잔고통보, 3:특이신호
+            {
+                apiMessage.Append(AxKHOpenAPI.GetChejanData(9201).Trim()).Append(DATA_SEPARATOR)
+                .Append(AxKHOpenAPI.GetChejanData(9203).Trim()).Append(DATA_SEPARATOR)
+                .Append(AxKHOpenAPI.GetChejanData(9001).Trim()).Append(DATA_SEPARATOR)
+                .Append(AxKHOpenAPI.GetChejanData(302).Trim()).Append(DATA_SEPARATOR)
+                .Append(AxKHOpenAPI.GetChejanData(900).Trim()).Append(DATA_SEPARATOR)
+                .Append(AxKHOpenAPI.GetChejanData(901).Trim());
+                ApiSocketClient.Instance.SendMessage("KWCBORD1", apiMessage.ToString());
+                
+                //GetOPW00004(nowCallbackID, string arg1, string arg2, string arg3, string arg4)
+                
+            } else if (e.sGubun == "1") // sGubun – 0:주문체결통보, 1:잔고통보, 3:특이신호
+            {
+                 apiMessage.Append(AxKHOpenAPI.GetChejanData(10).Replace("-","")).Append(DATA_SEPARATOR)
+                     .Append(AxKHOpenAPI.GetChejanData(8019).Trim()).Append(DATA_SEPARATOR)
+                     .Append(AxKHOpenAPI.GetChejanData(932).Trim()).Append(DATA_SEPARATOR)
+                     .Append(AxKHOpenAPI.GetChejanData(950).Trim());
+                 //ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString());
+                
+                //GetOPW00004(nowCallbackID, string arg1, string arg2, string arg3, string arg4)
+                
+            }
         }
 
         private void axKHOpenAPI_OnReceiveConditionVer(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveConditionVerEvent e)
@@ -199,6 +226,13 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             if (e.sRQName == "계좌평가현황요청")
             {
                 processTrData(sender, e);
+                return;
+            } else if (e.sRQName == "시장가주식주문")
+            {
+                apiMessage.Append("ORD10001").Append(PARAM_SEPARATOR)
+                    .Append(nowCallbackID).Append(PARAM_SEPARATOR)
+                    .Append("0").Append(PARAM_SEPARATOR).Append("SUCCESS");
+                ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString());
                 return;
             }
             logger.Debug("e.sRQName:"+ e.sRQName+ " , e.sRQName:"+ e.sRQName + ", sPrevNext:" + e.sPrevNext);
@@ -3724,7 +3758,12 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         {
             nowCallbackID = callbackID;
             string screenCode = "9999";
-            return AxKHOpenAPI.SendOrder("주식주문", screenCode, arg1, Int32.Parse(arg2), arg3, Int32.Parse(arg4), Int32.Parse(arg5), arg6, arg7) + "";
+            string orderRqName = "주식주문";
+            if (arg6 == "03")
+            {
+                orderRqName = "시장가주식주문";
+            }
+            return AxKHOpenAPI.SendOrder(orderRqName, screenCode, arg1, Int32.Parse(arg2), arg3, Int32.Parse(arg4), Int32.Parse(arg5), arg6, arg7) + "";
         }
 
         ///<summary> 코드명:ORD10002 기능명:코스피200선물옵션,주식선물전용</summary>
