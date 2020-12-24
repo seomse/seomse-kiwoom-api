@@ -119,31 +119,53 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         {
             StringBuilder apiMessage = new StringBuilder();
             logger.Debug("onReceiveChejanData e.sGubun:" + e.sGubun);
-            apiMessage.Append("ORD10001").Append(PARAM_SEPARATOR)
-                .Append(nowCallbackID).Append(PARAM_SEPARATOR)
-                .Append("0").Append(PARAM_SEPARATOR);
             if (e.sGubun == "0") // sGubun – 0:주문체결통보, 1:잔고통보, 3:특이신호
             {
-                apiMessage.Append(AxKHOpenAPI.GetChejanData(9201).Trim()).Append(DATA_SEPARATOR)
-                .Append(AxKHOpenAPI.GetChejanData(9203).Trim()).Append(DATA_SEPARATOR)
-                .Append(AxKHOpenAPI.GetChejanData(9001).Trim()).Append(DATA_SEPARATOR)
-                .Append(AxKHOpenAPI.GetChejanData(302).Trim()).Append(DATA_SEPARATOR)
-                .Append(AxKHOpenAPI.GetChejanData(900).Trim()).Append(DATA_SEPARATOR)
-                .Append(AxKHOpenAPI.GetChejanData(901).Trim());
-                ApiSocketClient.Instance.SendMessage("KWCBORD1", apiMessage.ToString());
+                
+                /**
+                 *
+                 [OnReceiveChejan()이벤트로 전달되는 FID목록정리]
+                    "9201" : "계좌번호" 
+                    "9203" : "주문번호" 
+                    "9001" : "종목코드" 
+                    "302" : "종목명" 
+                    "900" : "주문수량" 
+                    "901" : "주문가격" 
+                    "906" : "매매구분" 
+                    "908" : "주문/체결시간" 
+                    "909" : "체결번호" 
+                    "910" : "체결가" 
+                    "911" : "체결량"
+                    "913" : "주문상태"
+                 */
+                apiMessage
+                    .Append(AxKHOpenAPI.GetChejanData(9201).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(9203).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(9001).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(302).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(900).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(901).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(906).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(908).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(909).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(910).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(911).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(913).Trim());
+                
+                    
+                ApiSocketClient.Instance.SendMessage("KWCBCD01", apiMessage.ToString());
                 
                 //GetOPW00004(nowCallbackID, string arg1, string arg2, string arg3, string arg4)
                 
             } else if (e.sGubun == "1") // sGubun – 0:주문체결통보, 1:잔고통보, 3:특이신호
             {
-                 apiMessage.Append(AxKHOpenAPI.GetChejanData(10).Replace("-","")).Append(DATA_SEPARATOR)
-                     .Append(AxKHOpenAPI.GetChejanData(8019).Trim()).Append(DATA_SEPARATOR)
-                     .Append(AxKHOpenAPI.GetChejanData(932).Trim()).Append(DATA_SEPARATOR)
-                     .Append(AxKHOpenAPI.GetChejanData(950).Trim());
+                 // apiMessage.Append(AxKHOpenAPI.GetChejanData(10).Replace("-","")).Append(DATA_SEPARATOR)
+                 //     .Append(AxKHOpenAPI.GetChejanData(8019).Trim()).Append(DATA_SEPARATOR)
+                 //     .Append(AxKHOpenAPI.GetChejanData(932).Trim()).Append(DATA_SEPARATOR)
+                 //     .Append(AxKHOpenAPI.GetChejanData(950).Trim());
                  //ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString());
                 
                 //GetOPW00004(nowCallbackID, string arg1, string arg2, string arg3, string arg4)
-                
             }
         }
 
@@ -239,15 +261,13 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             object result = AxKHOpenAPI.GetCommDataEx(e.sTrCode, e.sRQName);
 
             Type valueType = result.GetType();
-            object[,] resultArrMulti;
-            object[] resultArr;
-           
+
             logger.Info("axKHOpenAPI_OnReceiveTrData:" + e.sRQName);
             
 
             if (valueType.FullName == "System.Object[,]")
             {
-                resultArrMulti = (object[,])result;
+                var resultArrMulti = (object[,])result;
                 apiMessage.Append(code).Append(PARAM_SEPARATOR)
                     .Append(nowCallbackID).Append(PARAM_SEPARATOR)
                     .Append(e.sPrevNext).Append(PARAM_SEPARATOR);
@@ -267,7 +287,7 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             }
             else if (valueType.FullName == "System.Object[]")
             {
-                resultArr = (object[])result;
+                var resultArr = (object[])result;
                 apiMessage.Append(code).Append(PARAM_SEPARATOR)
                     .Append(nowCallbackID).Append(PARAM_SEPARATOR)
                     .Append(e.sPrevNext).Append(PARAM_SEPARATOR);
