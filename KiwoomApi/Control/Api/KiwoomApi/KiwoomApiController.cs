@@ -131,30 +131,39 @@ namespace KiwoomApi.Control.Api.KiwoomApi
                     "302" : "종목명" 
                     "900" : "주문수량" 
                     "901" : "주문가격" 
-                    "906" : "매매구분" 
+                    "905" : "주문구분" 
                     "908" : "주문/체결시간" 
                     "909" : "체결번호" 
                     "910" : "체결가" 
                     "911" : "체결량"
-                    "913" : "주문상태"
+                    "951" : "예수금"
                  */
-                apiMessage
-                    .Append(AxKHOpenAPI.GetChejanData(9201).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(9203).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(9001).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(302).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(900).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(901).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(906).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(908).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(909).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(910).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(911).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(913).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(951).Trim());
+                if (AxKHOpenAPI.GetChejanData(913).Trim() == "체결")
+                {
+                    string sellBuy = "2";
+                    if (AxKHOpenAPI.GetChejanData(905).Trim() == "+매수")
+                    {
+                        sellBuy = "1";
+                    }
+                    
+                    apiMessage
+                        .Append(AxKHOpenAPI.GetChejanData(9201).Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(9203).Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(9001).Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(302).Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(900).Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(901).Trim()).Append(DATA_SEPARATOR)
+                        .Append(sellBuy).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(908).Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(909).Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(910).Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(911).Trim()).Append(DATA_SEPARATOR)
+                        .Append(AxKHOpenAPI.GetChejanData(951).Trim());
                 
                     
-                ApiSocketClient.Instance.SendMessage("KWCBCD01", apiMessage.ToString());
+                    ApiSocketClient.Instance.SendMessage("KWCBCD01", apiMessage.ToString());
+                }
+
                 
                 //GetOPW00004(nowCallbackID, string arg1, string arg2, string arg3, string arg4)
                 
