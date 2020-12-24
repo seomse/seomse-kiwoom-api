@@ -150,7 +150,8 @@ namespace KiwoomApi.Control.Api.KiwoomApi
                     .Append(AxKHOpenAPI.GetChejanData(909).Trim()).Append(DATA_SEPARATOR)
                     .Append(AxKHOpenAPI.GetChejanData(910).Trim()).Append(DATA_SEPARATOR)
                     .Append(AxKHOpenAPI.GetChejanData(911).Trim()).Append(DATA_SEPARATOR)
-                    .Append(AxKHOpenAPI.GetChejanData(913).Trim());
+                    .Append(AxKHOpenAPI.GetChejanData(913).Trim()).Append(DATA_SEPARATOR)
+                    .Append(AxKHOpenAPI.GetChejanData(951).Trim());
                 
                     
                 ApiSocketClient.Instance.SendMessage("KWCBCD01", apiMessage.ToString());
