@@ -29,6 +29,7 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             ///<param name="arg7">원주문번호 : 신규주문에는 공백, 정정(취소)주문할 원주문번호를 입력합니다.</param>
             Console.WriteLine("Order:" + orderMessage);
             string[] paramArr = Separator.ParseData(orderMessage);
+            //4550089011|1|048550|1|1730|03|
             api.GetORD10001(callbackID,paramArr[0], paramArr[1], paramArr[2], paramArr[3], paramArr[4], paramArr[5], paramArr[6]);
             return SUCCESS;
         }
@@ -36,7 +37,8 @@ namespace KiwoomApi.Control.Api.KiwoomApi
 
         public static string CallTR(string trCode , string callbackID, string trMessage)
         {
-            Console.WriteLine("CallTR:" + trCode + "," + callbackID + "," + trMessage);
+            Console.WriteLine("CallTR:" + trCode + "," + callbackID + "," );
+            Console.WriteLine("trMessage:" + trMessage);
             string[] paramArr = Separator.ParseData(trMessage);
             try
             {
@@ -193,9 +195,9 @@ namespace KiwoomApi.Control.Api.KiwoomApi
                     //OPT10079 기능명:주식틱차트조회요청
                     case "OPT10079":  api.GetOPT10079(callbackID,paramArr[0], paramArr[1], paramArr[2]); break;
                     //OPT10080 기능명:주식분봉차트조회요청
-                    case "OPT10080":  api.GetOPT10080(callbackID,paramArr[0], paramArr[1], paramArr[2]); break;
+                    case "OPT10080":  api.GetOPT10080(callbackID,paramArr[0], paramArr[1], paramArr[2], paramArr[3]); break;
                     //OPT10081 기능명:주식일봉차트조회요청
-                    case "OPT10081":  api.GetOPT10081(callbackID,paramArr[0], paramArr[1], paramArr[2]); break;
+                    case "OPT10081":  api.GetOPT10081(callbackID,paramArr[0], paramArr[1], paramArr[2], paramArr[3]); break;
                     //OPT10082 기능명:주식주봉차트조회요청
                     case "OPT10082":  api.GetOPT10082(callbackID,paramArr[0], paramArr[1], paramArr[2]); break;
                     //OPT10083 기능명:주식월봉차트조회요청

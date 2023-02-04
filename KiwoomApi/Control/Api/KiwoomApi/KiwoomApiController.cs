@@ -117,35 +117,44 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         private void axKHOpenAPI_OnReceiveChejanData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveChejanDataEvent e)
         {
             //onReceiveChejanData(sender, e);
+            logger.Info("OnReceiveChejanData:" + e.sGubun );
         }
 
         private void axKHOpenAPI_OnReceiveConditionVer(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveConditionVerEvent e)
         {
+            logger.Info("axKHOpenAPI_OnReceiveConditionVer " + e.sMsg) ;
             //onReceiveConditionVer(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveInvestRealData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveInvestRealDataEvent e)
         {
+            logger.Info("axKHOpenAPI_OnReceiveInvestRealData " + e.sRealKey) ;
             //onReceiveInvestRealData(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveMsg(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveMsgEvent e)
         {
+            
+            logger.Info("axKHOpenAPI_OnReceiveMsg " + e.sMsg) ;
             //onReceiveMsg(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveRealCondition(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveRealConditionEvent e)
         {
+            logger.Info("axKHOpenAPI_OnReceiveRealCondition " + e.strConditionName) ;
             //onReceiveRealCondition(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveRealData(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveRealDataEvent e)
         {
+            logger.Info("axKHOpenAPI_OnReceiveRealData " + e.sRealData) ;
             //onReceiveRealData(sender, e);
         }
 
         private void axKHOpenAPI_OnReceiveTrCondition(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrConditionEvent e)
         {
+            
+            logger.Info("axKHOpenAPI_OnReceiveTrCondition " + e.strConditionName) ;
             //onReceiveTrCondition(sender, e);
         }
         /// <summary>
@@ -158,7 +167,6 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             StringBuilder apiMessage = new StringBuilder();
 
             object result = AxKHOpenAPI.GetCommDataEx(e.sTrCode, e.sRQName);
-            logger.Debug("e.sRQName:"+ e.sRQName+ " , e.sRQName:"+ e.sRQName + ", sPrevNext:" + e.sPrevNext);
             string code = getTRCode(e.sRQName);
 
             if (result == null)
@@ -166,41 +174,80 @@ namespace KiwoomApi.Control.Api.KiwoomApi
                 logger.Err(" Data is null!");
 
                 apiMessage.Append(code).Append(PARAM_SEPARATOR)
-                    .Append(nowCallbackID).Append(PARAM_SEPARATOR).Append("FAIL");
+                    .Append(nowCallbackID).Append(PARAM_SEPARATOR)
+                    .Append("0").Append(PARAM_SEPARATOR).Append("FAIL");
 
                 ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString());
                 return;
             }
 
             Type valueType = result.GetType();
-            object[,] resultArrMulti;
-            object[] resultArr;
+            object[,] resultArrMulti = null;
+            object[] resultArr = null ;
            
             logger.Info("axKHOpenAPI_OnReceiveTrData:" + e.sRQName);
-            
+            logger.Info("valueType.FullName " + valueType.FullName);
 
             if (valueType.FullName == "System.Object[,]")
             {
+
                 resultArrMulti = (object[,])result;
-                apiMessage.Append(code).Append(PARAM_SEPARATOR)
-                    .Append(nowCallbackID).Append(PARAM_SEPARATOR)
-                    .Append(e.sPrevNext).Append(PARAM_SEPARATOR);
-                for (int i = 0; i < resultArrMulti.GetLength(0); i++)
+
+                if (resultArrMulti.Length == 0)
                 {
-                    for (int j = 0; j < resultArrMulti.GetLength(1); j++)
+                    try
                     {
-                        apiMessage.Append(resultArrMulti[i, j]).Append(DATA_SEPARATOR);
+
+                        resultArr = (object[])result;
+                    }
+                    catch (Exception ex)
+                    {
+                        apiMessage.Append(code).Append(PARAM_SEPARATOR)
+                       .Append(nowCallbackID).Append(PARAM_SEPARATOR)
+                       .Append(e.sPrevNext).Append(PARAM_SEPARATOR);
+
+                        ApiSocketClient.Instance.SendMessage("KWCBTR01", apiMessage.ToString());
+                        return;
+
+                    }
+
+                    // logger.Info("apiMessage: " + apiMessage + " " + resultArr.Length +" " + resultArr.GetLength(0));
+                    apiMessage.Append(code).Append(PARAM_SEPARATOR)
+                        .Append(nowCallbackID).Append(PARAM_SEPARATOR)
+                        .Append(e.sPrevNext).Append(PARAM_SEPARATOR);
+                    for (int i = 0; i < resultArr.GetLength(0); i++)
+                    {
+                        apiMessage.Append(resultArr[i]).Append(DATA_SEPARATOR);
                     }
                     apiMessage.Length = apiMessage.Length - 1;
-                    apiMessage.Append("\n");
                 }
-                if (apiMessage.Length > 0)
+                else
                 {
-                    apiMessage.Length = apiMessage.Length - 1;
+                    // logger.Info("apiMessage: if else!");
+                    apiMessage.Append(code).Append(PARAM_SEPARATOR)
+                        .Append(nowCallbackID).Append(PARAM_SEPARATOR)
+                        .Append(e.sPrevNext).Append(PARAM_SEPARATOR);
+
+                    // logger.Info("apiMessage: " + apiMessage + " " + resultArrMulti.Length);
+
+                    for (int i = 0; i < resultArrMulti.GetLength(0); i++)
+                    {
+                        for (int j = 0; j < resultArrMulti.GetLength(1); j++)
+                        {
+                            apiMessage.Append(resultArrMulti[i, j]).Append(DATA_SEPARATOR);
+                        }
+                        apiMessage.Length = apiMessage.Length - 1;
+                        apiMessage.Append("\n");
+                    }
+                    if (apiMessage.Length > 0)
+                    {
+                        apiMessage.Length = apiMessage.Length - 1;
+                    }
                 }
             }
             else if (valueType.FullName == "System.Object[]")
             {
+                logger.Info("apiMessage: else if!");
                 resultArr = (object[])result;
                 apiMessage.Append(code).Append(PARAM_SEPARATOR)
                     .Append(nowCallbackID).Append(PARAM_SEPARATOR)
@@ -213,6 +260,7 @@ namespace KiwoomApi.Control.Api.KiwoomApi
             }
             else
             {
+                logger.Info("apiMessage: else!" );
                 apiMessage.Append(result);
             }
 
@@ -457,9 +505,10 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         public void GetOPT10001(string callbackID, string arg1)
         {
+            Console.WriteLine("OPT0001" + arg1);
             nowCallbackID = callbackID;
             SetInputValue("종목코드", arg1); 
-            CommRqData("주식기본정보요청", "OPT10001", 0, GetScrNum());
+            CommRqData("주식기본정보요청", "opt10001", 0, GetScrNum());
         }
 
         ///<summary> 코드명:OPT10002 기능명:주식거래원요청</summary>
@@ -1659,27 +1708,28 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg2">틱범위 : 1:1분, 3:3분, 5:5분, 10:10분, 15:15분, 30:30분, 45:45분, 60:60분</param>
         ///<param name="arg3">수정주가구분 : 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할, 16:액면병합, 32:기업합병, 64:감자, 256:권리락</param>
-        public void GetOPT10080(string callbackID, string arg1, string arg2, string arg3)
+        public void GetOPT10080(string callbackID, string arg1, string arg2, string arg3, string arg4)
         {
             nowCallbackID = callbackID;
             
             SetInputValue("종목코드", arg1); 
             SetInputValue("틱범위", arg2);
             SetInputValue("수정주가구분", arg3);
-            CommRqData("주식분봉차트조회요청", "OPT10080", 0, GetScrNum());
+            logger.Info("GetOPT10080 callbackID " + callbackID + " arg1 " + arg1 + " arg2 " + arg2 + " arg3 " + arg3 + " arg4 " + arg4) ;
+            CommRqData("주식분봉차트조회요청", "OPT10080", Int32.Parse(arg4), GetScrNum());
         }
 
         ///<summary> 코드명:OPT10081 기능명:주식일봉차트조회요청</summary>
         ///<param name="arg1">종목코드 : 전문 조회할 종목코드</param>
         ///<param name="arg2">기준일자 : YYYYMMDD (20160101 연도4자리, 월 2자리, 일 2자리 형식)</param>
         ///<param name="arg3">수정주가구분 : 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할, 16:액면병합, 32:기업합병, 64:감자, 256:권리락 (각 값은 서로 조합해서 수신될 수 있음. 예를 들면 6: 무상증자 + 배당락, 288: 기업합병+권리락)</param>
-        public void GetOPT10081(string callbackID, string arg1, string arg2, string arg3)
+        public void GetOPT10081(string callbackID, string arg1, string arg2, string arg3, string arg4)
         {
             nowCallbackID = callbackID;
             SetInputValue("종목코드", arg1); 
             SetInputValue("기준일자", arg2);
             SetInputValue("수정주가구분", arg3);
-            CommRqData("주식일봉차트조회요청", "OPT10081", 0, GetScrNum());
+            CommRqData("주식일봉차트조회요청", "OPT10081", Int32.Parse(arg4), GetScrNum());
         }
 
         ///<summary> 코드명:OPT10082 기능명:주식주봉차트조회요청</summary>
@@ -3684,7 +3734,16 @@ namespace KiwoomApi.Control.Api.KiwoomApi
         public string GetORD10001(string callbackID , string arg1, string arg2, string arg3, string arg4, string arg5, string arg6, string arg7)
         {
             nowCallbackID = callbackID;
-            string screenCode = "9999";
+            string screenCode = "0101";
+            //4550089011|1|048550|1|1730|03|
+            logger.Debug("call:"+callbackID);
+            logger.Debug("arg1:"+arg1);
+            logger.Debug("arg2:"+arg2);
+            logger.Debug("arg3:"+arg3);
+            logger.Debug("arg4:"+arg4);
+            logger.Debug("arg5:"+arg5);
+            logger.Debug("arg6:"+arg6);
+            logger.Debug("arg7:"+arg7);
             return AxKHOpenAPI.SendOrder("주식주문", screenCode, arg1, Int32.Parse(arg2), arg3, Int32.Parse(arg4), Int32.Parse(arg5), arg6, arg7) + "";
         }
 
