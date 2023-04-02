@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="C:\Users\tramp\AppData\Local\JetBrains\Rider2020.2\extResources" t="IncludeRecursive" />
+    <e p="C:\Users\tramp\AppData\Local\JetBrains\Rider2020.2\resharper-host\Local\Transient\Rider\v202\SolutionCaches\_KiwoomApi.-389735974.00" t="ExcludeRecursive" />
+    <e p="C:\workspace\git\seomse-kiwoom-api" t="IncludeFlat">
+      <e p="KiwoomApi" t="IncludeRecursive">
+        <e p="App.config" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="Control" t="Include">
+          <e p="Api" t="Include">
+            <e p="KiwoomApi" t="Include">
+              <e p="KiwoomApiCaller.cs" t="Include" />
+              <e p="KiwoomApiController.cs" t="Include" />
+              <e p="KiwoomApiMessageQueue.cs" t="Include" />
+            </e>
+            <e p="SocketApi" t="Include">
+              <e p="DefaultSocketMessage.cs" t="Include" />
+              <e p="ISocketMessage.cs" t="Include" />
+              <e p="Message" t="Include">
+                <e p="KWTR0001.cs" t="Include" />
+                <e p="KWTRD001.cs" t="Include" />
+              </e>
+              <e p="MessageParser.cs" t="Include" />
+            </e>
+          </e>
+          <e p="Config" t="Include">
+            <e p="ConfigManager.cs" t="Include" />
+          </e>
+          <e p="DB" t="Include">
+            <e p="DBController.cs" t="Include" />
+          </e>
+          <e p="Log" t="Include">
+            <e p="Logger.cs" t="Include" />
+          </e>
+          <e p="Program" t="Include">
+            <e p="EndProgramThread.cs" t="Include" />
+          </e>
+          <e p="Socket" t="Include">
+            <e p="ApiSocketClient.cs" t="Include" />
+            <e p="ApiSocketReciever.cs" t="Include" />
+            <e p="ApiSocketServer.cs" t="Include" />
+          </e>
+        </e>
+        <e p="KiwoomApi.csproj" t="IncludeRecursive" />
+        <e p="Lib" t="Include">
+          <e p="AxInterop.KHOpenAPILib.dll" t="Include" />
+          <e p="Interop.KHOpenAPILib.dll" t="Include" />
+        </e>
+        <e p="log4net.config" t="Include" />
+        <e p="Model" t="Include">
+          <e p="Def" t="Include">
+            <e p="KiwoomCode.cs" t="Include" />
+            <e p="Separator.cs" t="Include" />
+          </e>
+        </e>
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="packages.config" t="Include" />
+        <e p="Program.cs" t="Include" />
+        <e p="Properties" t="Include">
+          <e p="AssemblyInfo.cs" t="Include" />
+        </e>
+        <e p="View" t="Include">
+          <e p="KiwoomApiForm.cs" t="Include" />
+          <e p="KiwoomApiForm.Designer.cs" t="Include" />
+          <e p="KiwoomApiForm.resx" t="Include" />
+        </e>
+      </e>
+      <e p="KiwoomApi.sln" t="IncludeFlat" />
+      <e p="packages" t="ExcludeRecursive" />
+      <e p="Setup" t="IncludeRecursive">
+        <e p="Setup.vdproj" t="IncludeRecursive" />
+      </e>
+    </e>
+  </component>
+</project>
